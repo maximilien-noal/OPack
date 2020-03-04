@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>OPack</name>
+    </assembly>
+    <members>
+        <member name="T:OPack.Packer">
+            <summary>
+            Ref: https://stackoverflow.com/questions/28225303/equivalent-in-c-sharp-of-pythons-struct-pack-unpack
+            This is a crude implementation of a format string based struct converter for C#. This is
+            probably not the best implementation, the fastest implementation, the most bug-proof
+            implementation, or even the most functional implementation. It's provided as-is for free. Enjoy.
+            </summary>
+        </member>
+        <member name="M:OPack.Packer.Pack(System.Object[],System.Boolean,System.String@)">
+            <summary>
+            Convert an array of objects to a byte array, along with a string that can be used with Unpack.
+            </summary>
+            <param name="items"> An object array of items to convert. </param>
+            <param name="isLittleEndian"> Set to False if you want to use big endian output. </param>
+            <param name="neededFormatStringToRecover">
+            Variable to place an 'Unpack'-compatible format string into.
+            </param>
+            <returns> A Byte array containing the objects provided in binary format. </returns>
+        </member>
+        <member name="M:OPack.Packer.Pack(System.Object[])">
+            <summary> Packs and automatically finds the format to be used. </summary>
+            <param name="items"> The struct to pack. </param>
+            <returns> The packed objects. </returns>
+        </member>
+        <member name="M:OPack.Packer.Unpack(System.String,System.Byte[])">
+            <summary>
+            Convert a byte array into an array of objects based on Python's "struct.unpack" protocol.
+            </summary>
+            <param name="format"> A "struct.pack"-compatible format string. </param>
+            <param name="bytes"> An array of bytes to convert to objects. </param>
+            <returns> Array of objects. </returns>
+            <remarks>
+            You are responsible for casting the objects in the array back to their proper types.
+            </remarks>
+            <exception cref="T:System.ArgumentException">
+            If <paramref name="format" /> doesn't correspond to the length of <paramref name="bytes" />.
+            </exception>
+        </member>
+        <member name="M:OPack.Packer.TypeAgnosticGetBytes(System.Object)">
+            <summary>
+            We use this function to provide an easier way to type-agnostically call the GetBytes
+            method of the BitConverter class. This means we can have much cleaner code above.
+            </summary>
+        </member>
+    </members>
+</doc>
