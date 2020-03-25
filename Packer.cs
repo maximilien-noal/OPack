@@ -1,75 +1,53 @@
 ﻿namespace OPack
 {
     using System;
+    using System.Buffers.Binary;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
 
-    /// <summary>
-    /// Ref: https://stackoverflow.com/questions/28225303/equivalent-in-c-sharp-of-pythons-struct-pack-unpack
-    /// This is a crude implementation of a format string based struct converter for C#. This is
-    /// probably not the best implementation, the fastest implementation, the most bug-proof
-    /// implementation, or even the most functional implementation. It's provided as-is for free. Enjoy.
-    /// </summary>
+    /// <summary> A translation of Python's pack and unpack protocol to C#. </summary>
     public static class Packer
     {
-        // TODO : Make it accept the same parameters as Python's struct.pacck
+        private static char[] prefixes = { '<', '>', '@', '=', '!' };
 
         /// <summary>
         /// Convert an array of objects to a byte array, along with a string that can be used with Unpack.
         /// </summary>
+        /// <param name="format"> The format to use for packing. </param>
         /// <param name="items"> An object array of items to convert. </param>
-        /// <param name="isLittleEndian"> Set to False if you want to use big endian output. </param>
-        /// <param name="neededFormatStringToRecover">
-        /// Variable to place an 'Unpack'-compatible format string into.
-        /// </param>
         /// <returns> A Byte array containing the objects provided in binary format. </returns>
-        public static byte[] Pack(object[] items, bool isLittleEndian, out string neededFormatStringToRecover)
+        public static byte[] Pack(string format, params object[] items)
         {
-            if (items == null)
+            if (items is null)
             {
                 throw new ArgumentNullException(nameof(items));
             }
 
-            // make a byte list to hold the bytes of output
+            if (string.IsNullOrWhiteSpace(format))
+            {
+                throw new ArgumentNullException(nameof(format));
+            }
+
+            bool isBigEndian = AreWeInBigEndianMode(format, items);
+
             List<byte> outputBytes = new List<byte>();
-
-            // should we be flipping bits for proper endinanness?
-            bool endianFlip = isLittleEndian != BitConverter.IsLittleEndian;
-
-            // start working on the output string
-            string outString = !isLittleEndian ? ">" : "<";
 
             // convert each item in the objects to the representative bytes
             foreach (object o in items)
             {
-                byte[] theseBytes = TypeAgnosticGetBytes(o);
-                if (endianFlip)
-                {
-                    theseBytes = (byte[])theseBytes.Reverse();
-                }
-
-                outString += GetFormatSpecifierFor(o);
+                byte[] theseBytes = TypeAgnosticGetBytes(o, isBigEndian);
                 outputBytes.AddRange(theseBytes);
             }
-
-            neededFormatStringToRecover = outString;
 
             return outputBytes.ToArray();
         }
 
-        /// <summary> Packs and automatically finds the format to be used. </summary>
-        /// <param name="items"> The struct to pack. </param>
-        /// <returns> The packed objects. </returns>
-        public static byte[] Pack(object[] items)
-        {
-            return Pack(items, true, out _);
-        }
-
         /// <summary>
-        /// Convert a byte array into an array of objects based on Python's "struct.unpack" protocol.
+        /// Convert a byte array into an array of numerical value types based on Python's
+        /// "struct.unpack" protocol.
         /// </summary>
-        /// <param name="format"> A "struct.pack"-compatible format string. </param>
+        /// <param name="format"> A "struct.unpack"-compatible format string. </param>
         /// <param name="bytes"> An array of bytes to convert to objects. </param>
         /// <returns> Array of objects. </returns>
         /// <remarks>
@@ -78,7 +56,7 @@
         /// <exception cref="ArgumentException">
         /// If <paramref name="format" /> doesn't correspond to the length of <paramref name="bytes" />.
         /// </exception>
-        public static object[] Unpack(string format, byte[] bytes)
+        public static object[] Unpack(string format, params byte[] bytes)
         {
             if (bytes == null)
             {
@@ -89,18 +67,6 @@
             if (string.IsNullOrWhiteSpace(format))
             {
                 throw new ArgumentException("Format string cannot be empty.");
-            }
-
-            // TODO : Manage endianess flip Little endian.
-            if (format.Substring(0, 1) == "<")
-            {
-                format = format.Substring(1);
-            }
-
-            // Big endian.
-            else if (format.Substring(0, 1) == ">")
-            {
-                format = format.Substring(1);
             }
 
             // Now, we find out how long the byte array needs to be
@@ -149,37 +115,37 @@
             {
                 if (character == 'q')
                 {
-                    outputList.Add((object)(long)BitConverter.ToInt64(bytes, byteArrayPosition));
+                    outputList.Add((object)BitConverter.ToInt64(bytes, byteArrayPosition));
                     byteArrayPosition += 8;
                     Debug.WriteLine("  Added signed 64-bit integer.");
                 }
                 else if (character == 'Q')
                 {
-                    outputList.Add((object)(ulong)BitConverter.ToUInt64(bytes, byteArrayPosition));
+                    outputList.Add((object)BitConverter.ToUInt64(bytes, byteArrayPosition));
                     byteArrayPosition += 8;
                     Debug.WriteLine("  Added unsigned 64-bit integer.");
                 }
                 else if (character == 'l')
                 {
-                    outputList.Add((object)(int)BitConverter.ToInt32(bytes, byteArrayPosition));
+                    outputList.Add((object)BitConverter.ToInt32(bytes, byteArrayPosition));
                     byteArrayPosition += 4;
                     Debug.WriteLine("  Added signed 32-bit integer.");
                 }
                 else if (character == 'L')
                 {
-                    outputList.Add((object)(uint)BitConverter.ToUInt32(bytes, byteArrayPosition));
+                    outputList.Add((object)BitConverter.ToUInt32(bytes, byteArrayPosition));
                     byteArrayPosition += 4;
                     Debug.WriteLine("  Added unsignedsigned 32-bit integer.");
                 }
                 else if (character == 'h')
                 {
-                    outputList.Add((object)(short)BitConverter.ToInt16(bytes, byteArrayPosition));
+                    outputList.Add((object)BitConverter.ToInt16(bytes, byteArrayPosition));
                     byteArrayPosition += 2;
                     Debug.WriteLine("  Added signed 16-bit integer.");
                 }
                 else if (character == 'H')
                 {
-                    outputList.Add((object)(ushort)BitConverter.ToUInt16(bytes, byteArrayPosition));
+                    outputList.Add((object)BitConverter.ToUInt16(bytes, byteArrayPosition));
                     byteArrayPosition += 2;
                     Debug.WriteLine("  Added unsigned 16-bit integer.");
                 }
@@ -195,7 +161,7 @@
                 {
                     buf = new byte[1];
                     Array.Copy(bytes, byteArrayPosition, buf, 0, 1);
-                    outputList.Add((object)(byte)buf[0]);
+                    outputList.Add((object)buf[0]);
                     byteArrayPosition++;
                     Debug.WriteLine("  Added unsigned byte");
                 }
@@ -206,11 +172,51 @@
                 }
                 else
                 {
-                    throw new ArgumentException("You should not be here.");
+                    throw new InvalidOperationException($"Invalid character found in arg {nameof(format)}.");
                 }
             }
 
             return outputList.ToArray();
+        }
+
+        private static bool AreWeInBigEndianMode(string format, object[] items)
+        {
+            var selectedPrefix = '@';
+
+            int formatLength = format.Length;
+
+            if (!prefixes.Contains(format[0]))
+            {
+                formatLength--;
+            }
+            else
+            {
+                selectedPrefix = format[0];
+            }
+
+            if (formatLength < items.Length)
+            {
+                throw new InvalidOperationException("The number of items must match the format length minus the endianness character");
+            }
+
+            bool isBigEndian = false;
+
+            if (selectedPrefix == '@' || selectedPrefix == '=')
+            {
+                isBigEndian = !BitConverter.IsLittleEndian;
+            }
+
+            if (selectedPrefix == '<')
+            {
+                isBigEndian = false;
+            }
+
+            if (selectedPrefix == '>' || selectedPrefix == '!')
+            {
+                isBigEndian = true;
+            }
+
+            return isBigEndian;
         }
 
         private static string GetFormatSpecifierFor(object o)
@@ -262,11 +268,23 @@
         /// We use this function to provide an easier way to type-agnostically call the GetBytes
         /// method of the BitConverter class. This means we can have much cleaner code above.
         /// </summary>
-        private static byte[] TypeAgnosticGetBytes(object o)
+        /// <param name="o"> The numerical value type to pack into an array of bytes. </param>
+        /// <param name="isBigEndian"> Do we use little or big endian mode. </param>
+        private static byte[] TypeAgnosticGetBytes(object o, bool isBigEndian)
         {
             if (o is int x)
             {
-                return BitConverter.GetBytes(x);
+                Span<byte> holder = stackalloc byte[4];
+                if (isBigEndian)
+                {
+                    BinaryPrimitives.WriteInt32BigEndian(holder, (int)o);
+                }
+                else
+                {
+                    BinaryPrimitives.WriteInt32LittleEndian(holder, (int)o);
+                }
+
+                return holder.ToArray();
             }
 
             if (o is uint x2)
