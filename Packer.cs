@@ -219,51 +219,6 @@
             return isBigEndian;
         }
 
-        private static string GetFormatSpecifierFor(object o)
-        {
-            if (o is int)
-            {
-                return "i";
-            }
-
-            if (o is uint)
-            {
-                return "I";
-            }
-
-            if (o is long)
-            {
-                return "q";
-            }
-
-            if (o is ulong)
-            {
-                return "Q";
-            }
-
-            if (o is short)
-            {
-                return "h";
-            }
-
-            if (o is ushort)
-            {
-                return "H";
-            }
-
-            if (o is byte)
-            {
-                return "B";
-            }
-
-            if (o is sbyte)
-            {
-                return "b";
-            }
-
-            throw new ArgumentException("Unsupported object type found");
-        }
-
         /// <summary>
         /// We use this function to provide an easier way to type-agnostically call the GetBytes
         /// method of the BitConverter class. This means we can have much cleaner code above.
