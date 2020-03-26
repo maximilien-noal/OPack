@@ -12,37 +12,8 @@
         private static char[] endiannessPrefixes = { '<', '>', '@', '=', '!' };
 
         /// <summary>
-        /// Convert an array of objects to a little endian byte array, and a string that can be used
-        /// with <see cref="Unpack(string, byte[])" />.
-        /// </summary>
-        /// <param name="items"> An object array of value types to convert. </param>
-        /// <returns>
-        /// A <see cref="Tuple{T1, T2}" /> Byte array containing the objects provided in binary format.
-        /// </returns>
-        public static Tuple<byte[], string> AutoPackLittleEndian(params object[] items)
-        {
-            if (items is null)
-            {
-                throw new ArgumentNullException(nameof(items));
-            }
-
-            StringBuilder format = new StringBuilder();
-
-            List<byte> outputBytes = new List<byte>();
-
-            foreach (object obj in items)
-            {
-                byte[] theseBytes = TypeAgnosticGetBytes(obj, false);
-                format.Append(GetFormatSpecifierFor(obj));
-                outputBytes.AddRange(theseBytes);
-            }
-
-            return Tuple.Create(outputBytes.ToArray(), format.ToString());
-        }
-
-        /// <summary>
         /// Return the size of the struct (and hence of the bytes object produced by
-        /// <see cref="AutoPackLittleEndian(object[])" /> corresponding to the format string format.
+        /// <see cref="Pack(object[])" /> corresponding to the format string format.
         /// </summary>
         /// <param name="format"> The format to be used for packing. </param>
         /// <returns> The size of the struct. </returns>
@@ -100,6 +71,35 @@
         }
 
         /// <summary>
+        /// Convert an array of objects to a little endian byte array, and a string that can be used
+        /// with <see cref="Unpack(string, byte[])" />.
+        /// </summary>
+        /// <param name="items"> An object array of value types to convert. </param>
+        /// <returns>
+        /// A <see cref="Tuple{T1, T2}" /> Byte array containing the objects provided in binary format.
+        /// </returns>
+        public static Tuple<byte[], string> Pack(params object[] items)
+        {
+            if (items is null)
+            {
+                throw new ArgumentNullException(nameof(items));
+            }
+
+            StringBuilder format = new StringBuilder();
+
+            List<byte> outputBytes = new List<byte>();
+
+            foreach (object obj in items)
+            {
+                byte[] theseBytes = TypeAgnosticGetBytes(obj, false);
+                format.Append(GetFormatSpecifierFor(obj));
+                outputBytes.AddRange(theseBytes);
+            }
+
+            return Tuple.Create(outputBytes.ToArray(), format.ToString());
+        }
+
+        /// <summary>
         /// Convert a byte array into an array of numerical value types based on Python's
         /// "struct.unpack" protocol.
         /// </summary>
@@ -138,7 +138,7 @@
                 if (character == 'q')
                 {
                     var array = new byte[8];
-                    bytes.CopyTo(array, byteArrayPosition);
+                    Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
                     if (useBigEndian)
                     {
                         outputList.Add(BinaryPrimitives.ReadInt64BigEndian(array));
@@ -152,34 +152,84 @@
                 }
                 else if (character == 'Q')
                 {
-                    outputList.Add(BitConverter.ToUInt64(bytes, byteArrayPosition));
+                    var array = new byte[8];
+                    Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
+                    if (useBigEndian)
+                    {
+                        outputList.Add(BinaryPrimitives.ReadUInt64BigEndian(array));
+                    }
+                    else
+                    {
+                        outputList.Add(BinaryPrimitives.ReadUInt64LittleEndian(array));
+                    }
+
                     byteArrayPosition += 8;
                 }
                 else if (character == 'l')
                 {
-                    outputList.Add(BitConverter.ToInt32(bytes, byteArrayPosition));
+                    var array = new byte[4];
+                    Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
+                    if (useBigEndian)
+                    {
+                        outputList.Add(BinaryPrimitives.ReadInt32BigEndian(array));
+                    }
+                    else
+                    {
+                        outputList.Add(BinaryPrimitives.ReadInt32LittleEndian(array));
+                    }
+
                     byteArrayPosition += 4;
                 }
                 else if (character == 'L')
                 {
-                    outputList.Add(BitConverter.ToUInt32(bytes, byteArrayPosition));
+                    var array = new byte[4];
+                    Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
+                    if (useBigEndian)
+                    {
+                        outputList.Add(BinaryPrimitives.ReadUInt32BigEndian(array));
+                    }
+                    else
+                    {
+                        outputList.Add(BinaryPrimitives.ReadUInt32LittleEndian(array));
+                    }
+
                     byteArrayPosition += 4;
                 }
                 else if (character == 'h')
                 {
-                    outputList.Add(BitConverter.ToInt16(bytes, byteArrayPosition));
+                    var array = new byte[2];
+                    Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
+                    if (useBigEndian)
+                    {
+                        outputList.Add(BinaryPrimitives.ReadInt16BigEndian(array));
+                    }
+                    else
+                    {
+                        outputList.Add(BinaryPrimitives.ReadInt16LittleEndian(array));
+                    }
+
                     byteArrayPosition += 2;
                 }
                 else if (character == 'H')
                 {
-                    outputList.Add(BitConverter.ToUInt16(bytes, byteArrayPosition));
+                    var array = new byte[2];
+                    Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
+                    if (useBigEndian)
+                    {
+                        outputList.Add(BinaryPrimitives.ReadUInt16BigEndian(array));
+                    }
+                    else
+                    {
+                        outputList.Add(BinaryPrimitives.ReadUInt16LittleEndian(array));
+                    }
+
                     byteArrayPosition += 2;
                 }
                 else if (character == 'b' || character == 'B')
                 {
-                    byte[] buf = new byte[1];
-                    Array.Copy(bytes, byteArrayPosition, buf, 0, 1);
-                    byte value = buf[0];
+                    byte[] array = new byte[1];
+                    Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
+                    byte value = array[0];
                     if (character == 'b')
                     {
                         outputList.Add((sbyte)value);
@@ -235,6 +285,21 @@
 
         private static string GetFormatSpecifierFor(object obj)
         {
+            if (obj is bool)
+            {
+                return "?";
+            }
+
+            if (obj is double)
+            {
+                return "d";
+            }
+
+            if (obj is float)
+            {
+                return "f";
+            }
+
             if (obj is int)
             {
                 return "i";
