@@ -4,10 +4,9 @@
     using System.Buffers.Binary;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Text;
 
-    /// <summary>
-    /// A translation of Python's pack and unpack protocol to C#.
-    /// </summary>
+    /// <summary> A translation of Python's pack and unpack protocol to C#. </summary>
     public static class Packer
     {
         private static char[] endiannessPrefixes = { '<', '>', '@', '=', '!' };
@@ -16,7 +15,7 @@
         /// Convert an array of objects to a little endian byte array, and a string that can be used
         /// with <see cref="Unpack(string, byte[])" />.
         /// </summary>
-        /// <param name="items">An object array of value types to convert.</param>
+        /// <param name="items"> An object array of value types to convert. </param>
         /// <returns>
         /// A <see cref="Tuple{T1, T2}" /> Byte array containing the objects provided in binary format.
         /// </returns>
@@ -27,23 +26,26 @@
                 throw new ArgumentNullException(nameof(items));
             }
 
+            StringBuilder format = new StringBuilder();
+
             List<byte> outputBytes = new List<byte>();
 
-            foreach (object o in items)
+            foreach (object obj in items)
             {
-                byte[] theseBytes = TypeAgnosticGetBytes(o, false);
+                byte[] theseBytes = TypeAgnosticGetBytes(obj, false);
+                format.Append(GetFormatSpecifierFor(obj));
                 outputBytes.AddRange(theseBytes);
             }
 
-            return Tuple.Create(outputBytes.ToArray(), string.Empty);
+            return Tuple.Create(outputBytes.ToArray(), format.ToString());
         }
 
         /// <summary>
         /// Return the size of the struct (and hence of the bytes object produced by
         /// <see cref="AutoPackLittleEndian(object[])" /> corresponding to the format string format.
         /// </summary>
-        /// <param name="format">The format to be used for packing.</param>
-        /// <returns>The size of the struct.</returns>
+        /// <param name="format"> The format to be used for packing. </param>
+        /// <returns> The size of the struct. </returns>
         public static int CalcSize(string format)
         {
             if (string.IsNullOrWhiteSpace(format))
@@ -101,9 +103,9 @@
         /// Convert a byte array into an array of numerical value types based on Python's
         /// "struct.unpack" protocol.
         /// </summary>
-        /// <param name="format">A "struct.unpack"-compatible format string.</param>
-        /// <param name="bytes">An array of bytes to convert to objects.</param>
-        /// <returns>Array of objects.</returns>
+        /// <param name="format"> A "struct.unpack"-compatible format string. </param>
+        /// <param name="bytes"> An array of bytes to convert to objects. </param>
+        /// <returns> Array of objects. </returns>
         /// <remarks>
         /// You are responsible for casting the objects in the array back to their proper types.
         /// </remarks>
@@ -127,14 +129,25 @@
                 throw new ArgumentException("The number of bytes provided does not match the total length of the format string.");
             }
 
-            //bool useBigEndian = AreWeInBigEndianMode(format);
+            bool useBigEndian = AreWeInBigEndianMode(format);
+
             int byteArrayPosition = 0;
             List<object> outputList = new List<object>();
             foreach (char character in format)
             {
                 if (character == 'q')
                 {
-                    outputList.Add(BitConverter.ToInt64(bytes, byteArrayPosition));
+                    var array = new byte[8];
+                    bytes.CopyTo(array, byteArrayPosition);
+                    if (useBigEndian)
+                    {
+                        outputList.Add(BinaryPrimitives.ReadInt64BigEndian(array));
+                    }
+                    else
+                    {
+                        outputList.Add(BinaryPrimitives.ReadInt64LittleEndian(array));
+                    }
+
                     byteArrayPosition += 8;
                 }
                 else if (character == 'Q')
@@ -191,24 +204,13 @@
             return outputList.ToArray();
         }
 
-        private static bool AreWeInBigEndianMode(string format, object[] items)
+        private static bool AreWeInBigEndianMode(string format)
         {
             var selectedPrefix = '@';
 
-            int formatLength = format.Length;
-
-            if (!endiannessPrefixes.Contains(format[0]))
-            {
-                formatLength--;
-            }
-            else
+            if (endiannessPrefixes.Contains(format[0]))
             {
                 selectedPrefix = format[0];
-            }
-
-            if (formatLength < items.Length)
-            {
-                throw new InvalidOperationException("The number of items must match the format length minus the start endianness character (if present).");
             }
 
             bool isBigEndian = false;
@@ -231,12 +233,57 @@
             return isBigEndian;
         }
 
+        private static string GetFormatSpecifierFor(object o)
+        {
+            if (o is int)
+            {
+                return "i";
+            }
+
+            if (o is uint)
+            {
+                return "I";
+            }
+
+            if (o is long)
+            {
+                return "q";
+            }
+
+            if (o is ulong)
+            {
+                return "Q";
+            }
+
+            if (o is short)
+            {
+                return "h";
+            }
+
+            if (o is ushort)
+            {
+                return "H";
+            }
+
+            if (o is byte)
+            {
+                return "B";
+            }
+
+            if (o is sbyte)
+            {
+                return "b";
+            }
+
+            throw new ArgumentException("Unsupported object type found");
+        }
+
         /// <summary>
         /// We use this function to provide an easier way to type-agnostically call the GetBytes
         /// method of the BitConverter class. This means we can have much cleaner code above.
         /// </summary>
-        /// <param name="boxedValue">The numerical value type to pack into an array of bytes.</param>
-        /// <param name="isBigEndian">Do we use little or big endian mode.</param>
+        /// <param name="boxedValue"> The numerical value type to pack into an array of bytes. </param>
+        /// <param name="isBigEndian"> Do we use little or big endian mode. </param>
         private static byte[] TypeAgnosticGetBytes(object boxedValue, bool isBigEndian)
         {
             if (boxedValue is int signedInteger)
