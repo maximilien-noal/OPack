@@ -72,7 +72,7 @@
 
         /// <summary>
         /// Convert an array of objects to a little endian byte array, and a string that can be used
-        /// with <see cref="Unpack(string, byte[])" />.
+        /// with <see cref="Unpack(string, int, byte[])" />.
         /// </summary>
         /// <param name="items"> An object array of value types to convert. </param>
         /// <returns>
@@ -104,6 +104,7 @@
         /// "struct.unpack" protocol.
         /// </summary>
         /// <param name="format"> A "struct.unpack"-compatible format string. </param>
+        /// <param name="offset"> Where to start unpacking in the byte buffer. </param>
         /// <param name="bytes"> An array of bytes to convert to objects. </param>
         /// <returns> Array of objects. </returns>
         /// <remarks>
@@ -112,7 +113,7 @@
         /// <exception cref="ArgumentException">
         /// If <paramref name="format" /> doesn't correspond to the length of <paramref name="bytes" />.
         /// </exception>
-        public static object[] Unpack(string format, params byte[] bytes)
+        public static object[] Unpack(string format, int offset = 0, params byte[] bytes)
         {
             if (bytes == null)
             {
@@ -131,7 +132,7 @@
 
             bool useBigEndian = AreWeInBigEndianMode(format);
 
-            int byteArrayPosition = 0;
+            int byteArrayPosition = offset;
             List<object> outputList = new List<object>();
             foreach (char character in format)
             {

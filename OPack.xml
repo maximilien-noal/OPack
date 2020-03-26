@@ -5,34 +5,32 @@
     </assembly>
     <members>
         <member name="T:OPack.Packer">
-            <summary>
-            Ref: https://stackoverflow.com/questions/28225303/equivalent-in-c-sharp-of-pythons-struct-pack-unpack
-            This is a crude implementation of a format string based struct converter for C#. This is
-            probably not the best implementation, the fastest implementation, the most bug-proof
-            implementation, or even the most functional implementation. It's provided as-is for free. Enjoy.
-            </summary>
+            <summary> A translation of Python's pack and unpack protocol to C#. </summary>
         </member>
-        <member name="M:OPack.Packer.Pack(System.Object[],System.Boolean,System.String@)">
+        <member name="M:OPack.Packer.CalcSize(System.String)">
             <summary>
-            Convert an array of objects to a byte array, along with a string that can be used with Unpack.
+            Return the size of the struct (and hence of the bytes object produced by
+            <see cref="M:OPack.Packer.Pack(System.Object[])" /> corresponding to the format string format.
             </summary>
-            <param name="items"> An object array of items to convert. </param>
-            <param name="isLittleEndian"> Set to False if you want to use big endian output. </param>
-            <param name="neededFormatStringToRecover">
-            Variable to place an 'Unpack'-compatible format string into.
-            </param>
-            <returns> A Byte array containing the objects provided in binary format. </returns>
+            <param name="format"> The format to be used for packing. </param>
+            <returns> The size of the struct. </returns>
         </member>
         <member name="M:OPack.Packer.Pack(System.Object[])">
-            <summary> Packs and automatically finds the format to be used. </summary>
-            <param name="items"> The struct to pack. </param>
-            <returns> The packed objects. </returns>
+            <summary>
+            Convert an array of objects to a little endian byte array, and a string that can be used
+            with <see cref="M:OPack.Packer.Unpack(System.String,System.Byte[])" />.
+            </summary>
+            <param name="items"> An object array of value types to convert. </param>
+            <returns>
+            A <see cref="T:System.Tuple`2" /> Byte array containing the objects provided in binary format.
+            </returns>
         </member>
         <member name="M:OPack.Packer.Unpack(System.String,System.Byte[])">
             <summary>
-            Convert a byte array into an array of objects based on Python's "struct.unpack" protocol.
+            Convert a byte array into an array of numerical value types based on Python's
+            "struct.unpack" protocol.
             </summary>
-            <param name="format"> A "struct.pack"-compatible format string. </param>
+            <param name="format"> A "struct.unpack"-compatible format string. </param>
             <param name="bytes"> An array of bytes to convert to objects. </param>
             <returns> Array of objects. </returns>
             <remarks>
@@ -42,11 +40,13 @@
             If <paramref name="format" /> doesn't correspond to the length of <paramref name="bytes" />.
             </exception>
         </member>
-        <member name="M:OPack.Packer.TypeAgnosticGetBytes(System.Object)">
+        <member name="M:OPack.Packer.TypeAgnosticGetBytes(System.Object,System.Boolean)">
             <summary>
             We use this function to provide an easier way to type-agnostically call the GetBytes
             method of the BitConverter class. This means we can have much cleaner code above.
             </summary>
+            <param name="boxedValue"> The numerical value type to pack into an array of bytes. </param>
+            <param name="isBigEndian"> Do we use little or big endian mode. </param>
         </member>
     </members>
 </doc>
