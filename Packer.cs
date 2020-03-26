@@ -13,7 +13,7 @@
 
         /// <summary>
         /// Return the size of the struct (and hence of the bytes object produced by
-        /// <see cref="Pack(object[])" /> corresponding to the format string format.
+        /// <see cref="Pack(int, object[])" /> corresponding to the format string format.
         /// </summary>
         /// <param name="format"> The format to be used for packing. </param>
         /// <returns> The size of the struct. </returns>
@@ -74,11 +74,12 @@
         /// Convert an array of objects to a little endian byte array, and a string that can be used
         /// with <see cref="Unpack(string, int, byte[])" />.
         /// </summary>
+        /// <param name="offset"> Where to start packing in the provided <paramref name="items" />. </param>
         /// <param name="items"> An object array of value types to convert. </param>
         /// <returns>
         /// A <see cref="Tuple{T1, T2}" /> Byte array containing the objects provided in binary format.
         /// </returns>
-        public static Tuple<byte[], string> Pack(params object[] items)
+        public static Tuple<byte[], string> Pack(int offset = 0, params object[] items)
         {
             if (items is null)
             {
@@ -89,8 +90,9 @@
 
             List<byte> outputBytes = new List<byte>();
 
-            foreach (object obj in items)
+            for (int i = offset; i < items.Length; i++)
             {
+                var obj = items[i];
                 byte[] theseBytes = TypeAgnosticGetBytes(obj, false);
                 format.Append(GetFormatSpecifierFor(obj));
                 outputBytes.AddRange(theseBytes);
@@ -104,7 +106,7 @@
         /// "struct.unpack" protocol.
         /// </summary>
         /// <param name="format"> A "struct.unpack"-compatible format string. </param>
-        /// <param name="offset"> Where to start unpacking in the byte buffer. </param>
+        /// <param name="offset"> Where to start unpacking in the provided <paramref name="bytes" />. </param>
         /// <param name="bytes"> An array of bytes to convert to objects. </param>
         /// <returns> Array of objects. </returns>
         /// <remarks>

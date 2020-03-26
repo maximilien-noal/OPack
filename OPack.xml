@@ -10,27 +10,29 @@
         <member name="M:OPack.Packer.CalcSize(System.String)">
             <summary>
             Return the size of the struct (and hence of the bytes object produced by
-            <see cref="M:OPack.Packer.Pack(System.Object[])" /> corresponding to the format string format.
+            <see cref="M:OPack.Packer.Pack(System.Int32,System.Object[])" /> corresponding to the format string format.
             </summary>
             <param name="format"> The format to be used for packing. </param>
             <returns> The size of the struct. </returns>
         </member>
-        <member name="M:OPack.Packer.Pack(System.Object[])">
+        <member name="M:OPack.Packer.Pack(System.Int32,System.Object[])">
             <summary>
             Convert an array of objects to a little endian byte array, and a string that can be used
-            with <see cref="M:OPack.Packer.Unpack(System.String,System.Byte[])" />.
+            with <see cref="M:OPack.Packer.Unpack(System.String,System.Int32,System.Byte[])" />.
             </summary>
+            <param name="offset"> Where to start packing in the provided <paramref name="items" />. </param>
             <param name="items"> An object array of value types to convert. </param>
             <returns>
             A <see cref="T:System.Tuple`2" /> Byte array containing the objects provided in binary format.
             </returns>
         </member>
-        <member name="M:OPack.Packer.Unpack(System.String,System.Byte[])">
+        <member name="M:OPack.Packer.Unpack(System.String,System.Int32,System.Byte[])">
             <summary>
             Convert a byte array into an array of numerical value types based on Python's
             "struct.unpack" protocol.
             </summary>
             <param name="format"> A "struct.unpack"-compatible format string. </param>
+            <param name="offset"> Where to start unpacking in the provided <paramref name="bytes" />. </param>
             <param name="bytes"> An array of bytes to convert to objects. </param>
             <returns> Array of objects. </returns>
             <remarks>
