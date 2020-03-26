@@ -3,6 +3,7 @@
     using System;
     using System.Buffers.Binary;
     using System.Collections.Generic;
+    using System.Globalization;
     using System.Linq;
     using System.Text;
 
@@ -71,6 +72,151 @@
         }
 
         /// <summary>
+        /// Convert an array of objects to a little endian byte array, while following the specified format.
+        /// </summary>
+        /// <param name="format"> A "struct.unpack"-compatible format string. </param>
+        /// <param name="offset"> Where to start packing in the provided <paramref name="items" />. </param>
+        /// <param name="items"> An array of items to convert to a byte array. </param>
+        /// <returns> A byte array of packed elements. </returns>
+        public static byte[] Pack(string format, int offset = 0, params object[] items)
+        {
+            if (items == null)
+            {
+                throw new ArgumentNullException(nameof(items));
+            }
+
+            if (string.IsNullOrWhiteSpace(format))
+            {
+                throw new ArgumentNullException(nameof(format));
+            }
+
+            int formatLength = format.Length;
+            int formatOffset = 0;
+
+            if (endiannessPrefixes.Contains(format[0]))
+            {
+                formatLength--;
+                formatOffset = 1;
+            }
+
+            if (items.Length != formatLength)
+            {
+                throw new ArgumentException($"The number of {nameof(items)} provided does not match the total length of the ${nameof(format)} string.");
+            }
+
+            bool useBigEndian = AreWeInBigEndianMode(format);
+
+            List<byte> outputBytes = new List<byte>();
+
+            for (int i = formatOffset; i < format.Length; i++)
+            {
+                var item = items[i + offset];
+                var character = format[i];
+
+                if (character == '?' || character == 'B')
+                {
+                    byte convertedItem = Convert.ToByte(item, CultureInfo.InvariantCulture);
+                    outputBytes.Add(convertedItem);
+                }
+                else if (character == 'b')
+                {
+                    sbyte convertedItem = Convert.ToSByte(item, CultureInfo.InvariantCulture);
+                    outputBytes.Add((byte)convertedItem);
+                }
+                else if (character == 'i')
+                {
+                    Span<byte> dest = stackalloc byte[4];
+                    if (useBigEndian)
+                    {
+                        BinaryPrimitives.WriteInt32BigEndian(dest, (int)item);
+                    }
+                    else
+                    {
+                        BinaryPrimitives.WriteInt32LittleEndian(dest, (int)item);
+                    }
+
+                    outputBytes.AddRange(dest.ToArray());
+                }
+                else if (character == 'I')
+                {
+                    Span<byte> dest = stackalloc byte[4];
+                    if (useBigEndian)
+                    {
+                        BinaryPrimitives.WriteUInt32BigEndian(dest, (uint)item);
+                    }
+                    else
+                    {
+                        BinaryPrimitives.WriteUInt32LittleEndian(dest, (uint)item);
+                    }
+
+                    outputBytes.AddRange(dest.ToArray());
+                }
+                else if (character == 'q' || character == 'l')
+                {
+                    Span<byte> dest = stackalloc byte[8];
+                    if (useBigEndian)
+                    {
+                        BinaryPrimitives.WriteInt64BigEndian(dest, (int)item);
+                    }
+                    else
+                    {
+                        BinaryPrimitives.WriteInt64LittleEndian(dest, (int)item);
+                    }
+
+                    outputBytes.AddRange(dest.ToArray());
+                }
+                else if (character == 'Q' || character == 'L')
+                {
+                    Span<byte> dest = stackalloc byte[8];
+                    if (useBigEndian)
+                    {
+                        BinaryPrimitives.WriteUInt64BigEndian(dest, (uint)item);
+                    }
+                    else
+                    {
+                        BinaryPrimitives.WriteUInt64LittleEndian(dest, (uint)item);
+                    }
+
+                    outputBytes.AddRange(dest.ToArray());
+                }
+                else if (character == 'h')
+                {
+                    Span<byte> dest = stackalloc byte[2];
+                    if (useBigEndian)
+                    {
+                        BinaryPrimitives.WriteInt16BigEndian(dest, (short)item);
+                    }
+                    else
+                    {
+                        BinaryPrimitives.WriteInt16LittleEndian(dest, (short)item);
+                    }
+
+                    outputBytes.AddRange(dest.ToArray());
+                }
+                else if (character == 'H')
+                {
+                    Span<byte> dest = stackalloc byte[2];
+                    if (useBigEndian)
+                    {
+                        BinaryPrimitives.WriteUInt16BigEndian(dest, (ushort)item);
+                    }
+                    else
+                    {
+                        BinaryPrimitives.WriteUInt16LittleEndian(dest, (ushort)item);
+                    }
+
+                    outputBytes.AddRange(dest.ToArray());
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Invalid character '{character}' found in arg {nameof(format)}.");
+                }
+            }
+
+            return outputBytes.ToArray();
+        }
+
+        /// <summary>
         /// Convert an array of objects to a little endian byte array, and a string that can be used
         /// with <see cref="Unpack(string, int, byte[])" />.
         /// </summary>
@@ -117,7 +263,7 @@
         /// </exception>
         public static object[] Unpack(string format, int offset = 0, params byte[] bytes)
         {
-            if (bytes == null)
+            if (bytes is null)
             {
                 throw new ArgumentNullException(nameof(bytes));
             }
