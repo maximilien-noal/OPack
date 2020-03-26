@@ -233,44 +233,44 @@
             return isBigEndian;
         }
 
-        private static string GetFormatSpecifierFor(object o)
+        private static string GetFormatSpecifierFor(object obj)
         {
-            if (o is int)
+            if (obj is int)
             {
                 return "i";
             }
 
-            if (o is uint)
+            if (obj is uint)
             {
                 return "I";
             }
 
-            if (o is long)
+            if (obj is long)
             {
                 return "q";
             }
 
-            if (o is ulong)
+            if (obj is ulong)
             {
                 return "Q";
             }
 
-            if (o is short)
+            if (obj is short)
             {
                 return "h";
             }
 
-            if (o is ushort)
+            if (obj is ushort)
             {
                 return "H";
             }
 
-            if (o is byte)
+            if (obj is byte)
             {
                 return "B";
             }
 
-            if (o is sbyte)
+            if (obj is sbyte)
             {
                 return "b";
             }
