@@ -10,11 +10,11 @@
     /// <summary> A translation of Python's pack and unpack protocol to C#. </summary>
     public static class Packer
     {
-        private static char[] endiannessPrefixes = { '<', '>', '@', '=', '!' };
+        private static readonly char[] EndiannessPrefixes = { '<', '>', '@', '=', '!' };
 
         /// <summary>
         /// Return the size of the struct (and hence of the bytes object produced by
-        /// <see cref="Pack(int, object[])" /> corresponding to the format string format.
+        /// <see cref="Pack(int, object[])" />) corresponding to the format string format.
         /// </summary>
         /// <param name="format"> The format to be used for packing. </param>
         /// <returns> The size of the struct. </returns>
@@ -27,7 +27,7 @@
 
             string formatWithoutEndianness = format;
 
-            if (endiannessPrefixes.Contains(format[0]))
+            if (EndiannessPrefixes.Contains(format[0]))
             {
                 formatWithoutEndianness = format.Substring(1);
             }
@@ -93,7 +93,7 @@
             int formatLength = format.Length;
             int formatOffset = 0;
 
-            if (endiannessPrefixes.Contains(format[0]))
+            if (EndiannessPrefixes.Contains(format[0]))
             {
                 formatLength--;
                 formatOffset = 1;
