@@ -10,15 +10,14 @@
         <member name="M:OPack.Packer.CalcSize(System.String)">
             <summary>
             Return the size of the struct (and hence of the bytes object produced by
-            <see cref="M:OPack.Packer.Pack(System.Int32,System.Object[])" />) corresponding to the format string format.
+            <see cref="M:OPack.Packer.Pack(System.Int32,System.Object[])" /> corresponding to the format string format.
             </summary>
             <param name="format"> The format to be used for packing. </param>
             <returns> The size of the struct. </returns>
         </member>
         <member name="M:OPack.Packer.Pack(System.String,System.Int32,System.Object[])">
             <summary>
-            Convert an array of objects to a little endian or big endian byte array, while following
-            the specified format.
+            Convert an array of objects to a little endian byte array, while following the specified format.
             </summary>
             <param name="format"> A "struct.unpack"-compatible format string. </param>
             <param name="offset"> Where to start packing in the provided <paramref name="items" />. </param>

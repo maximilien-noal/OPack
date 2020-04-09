@@ -72,7 +72,8 @@
         }
 
         /// <summary>
-        /// Convert an array of objects to a little endian byte array, while following the specified format.
+        /// Convert an array of objects to a little endian or big endian byte array, while following
+        /// the specified format.
         /// </summary>
         /// <param name="format"> A "struct.unpack"-compatible format string. </param>
         /// <param name="offset"> Where to start packing in the provided <paramref name="items" />. </param>
@@ -108,10 +109,10 @@
 
             List<byte> outputBytes = new List<byte>();
 
-            for (int i = formatOffset; i < format.Length; i++)
+            for (int i = 0; i < format.Length - formatOffset; i++)
             {
                 var item = items[i + offset];
-                var character = format[i];
+                var character = format[i + formatOffset];
 
                 if (character == '?' || character == 'B')
                 {
@@ -407,7 +408,7 @@
         {
             var selectedPrefix = '@';
 
-            if (endiannessPrefixes.Contains(format[0]))
+            if (EndiannessPrefixes.Contains(format[0]))
             {
                 selectedPrefix = format[0];
             }
