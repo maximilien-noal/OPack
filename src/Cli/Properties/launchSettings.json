@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Cli": {
+      "commandName": "Project",
+      "commandLineArgs": "-f \"<b\" -i -128"
+    }
+  }
+}

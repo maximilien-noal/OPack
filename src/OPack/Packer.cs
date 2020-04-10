@@ -2,6 +2,7 @@
 {
     using System;
     using System.Buffers.Binary;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Globalization;
     using System.Linq;
@@ -91,6 +92,20 @@
                 throw new ArgumentNullException(nameof(format));
             }
 
+            object[] itemsArray = items;
+
+            if (itemsArray is IEnumerable enumerable)
+            {
+                foreach (var item in enumerable)
+                {
+                    if (item is IEnumerable innerEnumerable)
+                    {
+                        itemsArray = innerEnumerable.Cast<object>().ToArray();
+                        break;
+                    }
+                }
+            }
+
             int formatLength = format.Length;
             int formatOffset = 0;
 
@@ -111,7 +126,7 @@
 
             for (int i = 0; i < format.Length - formatOffset; i++)
             {
-                var item = items[i + offset];
+                var item = itemsArray[i + offset];
                 var character = format[i + formatOffset];
 
                 if (character == '?' || character == 'B')

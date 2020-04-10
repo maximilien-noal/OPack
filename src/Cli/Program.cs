@@ -1,9 +1,11 @@
 ﻿using CommandLine;
 using OPack;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 
 namespace OPack.Cli
 {
@@ -31,10 +33,15 @@ namespace OPack.Cli
             var bytes = Packer.Pack(
                 opts.PackFormat,
                 offset,
-                opts.Input.Split(" ").
-                Select(x => long.Parse(x, NumberStyles.Any, System.Globalization.CultureInfo.CurrentCulture)));
-            var output = bytes.Select(x => x.ToString("X2", CultureInfo.CurrentCulture));
-            Console.WriteLine(output);
+                opts.Input);
+            var output = new StringBuilder();
+
+            foreach (var item in bytes)
+            {
+                output.Append(item.ToString("X", CultureInfo.CurrentCulture));
+            }
+
+            Console.WriteLine($@"b'\x{output}'");
         }
 
 #pragma warning disable CA1812
@@ -42,7 +49,7 @@ namespace OPack.Cli
         private class Options
         {
             [Option('i', "input", Required = true, HelpText = "Input number(s) to pack, separated by spaces.")]
-            public string Input { get; set; }
+            public IEnumerable<long> Input { get; set; }
 
             [Option('o', "offset", Required = false, HelpText = "Pack from offset.")]
             public int? Offset { get; set; }
