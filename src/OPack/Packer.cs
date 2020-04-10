@@ -172,11 +172,11 @@
                     Span<byte> dest = stackalloc byte[8];
                     if (useBigEndian)
                     {
-                        BinaryPrimitives.WriteInt64BigEndian(dest, (int)item);
+                        BinaryPrimitives.WriteInt64BigEndian(dest, (long)item);
                     }
                     else
                     {
-                        BinaryPrimitives.WriteInt64LittleEndian(dest, (int)item);
+                        BinaryPrimitives.WriteInt64LittleEndian(dest, (long)item);
                     }
 
                     outputBytes.AddRange(dest.ToArray());
@@ -186,11 +186,11 @@
                     Span<byte> dest = stackalloc byte[8];
                     if (useBigEndian)
                     {
-                        BinaryPrimitives.WriteUInt64BigEndian(dest, (uint)item);
+                        BinaryPrimitives.WriteUInt64BigEndian(dest, (ulong)item);
                     }
                     else
                     {
-                        BinaryPrimitives.WriteUInt64LittleEndian(dest, (uint)item);
+                        BinaryPrimitives.WriteUInt64LittleEndian(dest, (ulong)item);
                     }
 
                     outputBytes.AddRange(dest.ToArray());

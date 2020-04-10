@@ -50,10 +50,10 @@
                 var output = new StringBuilder();
                 foreach (var item in bytes)
                 {
-                    output.Append(item.ToString("X", CultureInfo.CurrentCulture));
+                    output.Append($@"\x{item.ToString("X", CultureInfo.CurrentCulture)}");
                 }
 
-                Console.WriteLine($@"b'\x{output}'");
+                Console.WriteLine($@"b'{output}'");
             }
         }
 
