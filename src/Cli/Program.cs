@@ -1,14 +1,12 @@
-﻿using CommandLine;
-using OPack;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-
-namespace OPack.Cli
+﻿namespace OPack.Cli
 {
+    using CommandLine;
+
+    using System;
+    using System.Collections.Generic;
+    using System.Globalization;
+    using System.Text;
+
     internal class Program
     {
         private static void HandleParseError(IEnumerable<Error> errs)
@@ -34,14 +32,29 @@ namespace OPack.Cli
                 opts.PackFormat,
                 offset,
                 opts.Input);
-            var output = new StringBuilder();
 
-            foreach (var item in bytes)
+            if (opts.MustUnpack)
             {
-                output.Append(item.ToString("X", CultureInfo.CurrentCulture));
+                var objects = Packer.Unpack(opts.PackFormat, offset, bytes);
+                Console.Write('(');
+                for (int i = 0; i < objects.Length; i++)
+                {
+                    Console.Write($"{objects[i]}");
+                    Console.Write(',');
+                }
+                Console.Write(')');
+                Console.Write(Environment.NewLine);
             }
+            else
+            {
+                var output = new StringBuilder();
+                foreach (var item in bytes)
+                {
+                    output.Append(item.ToString("X", CultureInfo.CurrentCulture));
+                }
 
-            Console.WriteLine($@"b'\x{output}'");
+                Console.WriteLine($@"b'\x{output}'");
+            }
         }
 
 #pragma warning disable CA1812
@@ -50,6 +63,9 @@ namespace OPack.Cli
         {
             [Option('i', "input", Required = true, HelpText = "Input number(s) to pack, separated by spaces.")]
             public IEnumerable<long> Input { get; set; }
+
+            [Option('u', "unpack", Required = false, HelpText = "Display result after unpacking, not only packing.")]
+            public bool MustUnpack { get; set; }
 
             [Option('o', "offset", Required = false, HelpText = "Pack from offset.")]
             public int? Offset { get; set; }

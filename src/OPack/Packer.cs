@@ -34,9 +34,9 @@
             }
 
             int totalByteLength = 0;
-            foreach (char c in formatWithoutEndianness)
+            for (int i = 0; i < formatWithoutEndianness.Length; i++)
             {
-                switch (c)
+                switch (formatWithoutEndianness[i])
                 {
                     case 'q':
                     case 'Q':
@@ -65,7 +65,7 @@
                         break;
 
                     default:
-                        throw new ArgumentException($"Invalid character found in format string : {c}.");
+                        throw new ArgumentException($"Invalid character found in format string : {formatWithoutEndianness[i]}.");
                 }
             }
 
@@ -298,9 +298,14 @@
 
             int byteArrayPosition = offset;
             List<object> outputList = new List<object>();
-            foreach (char character in format)
+            for (int i = 0; i < format.Length; i++)
             {
-                if (character == 'q')
+                if (EndiannessPrefixes.Contains(format[i]) && i == 0)
+                {
+                    continue;
+                }
+
+                if (format[i] == 'q')
                 {
                     var array = new byte[8];
                     Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
@@ -315,7 +320,7 @@
 
                     byteArrayPosition += 8;
                 }
-                else if (character == 'Q')
+                else if (format[i] == 'Q')
                 {
                     var array = new byte[8];
                     Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
@@ -330,7 +335,7 @@
 
                     byteArrayPosition += 8;
                 }
-                else if (character == 'l')
+                else if (format[i] == 'l')
                 {
                     var array = new byte[4];
                     Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
@@ -345,7 +350,7 @@
 
                     byteArrayPosition += 4;
                 }
-                else if (character == 'L')
+                else if (format[i] == 'L')
                 {
                     var array = new byte[4];
                     Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
@@ -360,7 +365,7 @@
 
                     byteArrayPosition += 4;
                 }
-                else if (character == 'h')
+                else if (format[i] == 'h')
                 {
                     var array = new byte[2];
                     Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
@@ -375,7 +380,7 @@
 
                     byteArrayPosition += 2;
                 }
-                else if (character == 'H')
+                else if (format[i] == 'H')
                 {
                     var array = new byte[2];
                     Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
@@ -390,12 +395,12 @@
 
                     byteArrayPosition += 2;
                 }
-                else if (character == 'b' || character == 'B')
+                else if (format[i] == 'b' || format[i] == 'B')
                 {
                     byte[] array = new byte[1];
                     Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
                     byte value = array[0];
-                    if (character == 'b')
+                    if (format[i] == 'b')
                     {
                         outputList.Add((sbyte)value);
                     }
@@ -406,13 +411,13 @@
 
                     byteArrayPosition++;
                 }
-                else if (character == 'x')
+                else if (format[i] == 'x')
                 {
                     byteArrayPosition++;
                 }
                 else
                 {
-                    throw new InvalidOperationException($"Invalid character '{character}' found in arg {nameof(format)}.");
+                    throw new InvalidOperationException($"Invalid character '{format[i]}' found in arg {nameof(format)}.");
                 }
             }
 
