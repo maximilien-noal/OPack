@@ -62,10 +62,21 @@
             </returns>
         </member>
         <member name="M:OPack.Packer.NativeCalcSize``1(``0)">
-            <summary> Calculates the size of the struct in unmanaged memory. </summary>
+            <summary> Calculates the size of the <see langword="struct" /> in unmanaged memory. </summary>
             <typeparam name="T"> typeof(struct). </typeparam>
-            <param name="nativeStruct"> The struct to give to <see cref="M:System.Runtime.InteropServices.Marshal.SizeOf``1(``0)" />. </param>
+            <param name="csharpStruct"> The struct to give to <see cref="M:System.Runtime.InteropServices.Marshal.SizeOf``1(``0)" />. </param>
             <returns> The native size of the struct. </returns>
+        </member>
+        <member name="M:OPack.Packer.NativePack``1(``0,System.Int32)">
+            <summary> Packs a <see langword="struct" /> into an array of bytes. </summary>
+            <typeparam name="T"> typeof(struct). </typeparam>
+            <param name="cSharpStruct"> The struct to give to <see cref="M:System.Runtime.InteropServices.Marshal.SizeOf``1(``0)" />. </param>
+            <param name="offset">
+            The index from which the fields will be packed. The order of declaration matters here.
+            </param>
+            <returns>
+            The struct packed in a one dimensional array, and a string to be used with <see />.
+            </returns>
         </member>
         <member name="M:OPack.Packer.CalcSize(System.String)">
             <summary> <inheritdoc /> </summary>

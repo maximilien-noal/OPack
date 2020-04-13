@@ -191,6 +191,11 @@
 
             for (int i = 0; i < format.Length - formatOffset; i++)
             {
+                if (i + offset >= itemsArray.Length)
+                {
+                    break;
+                }
+
                 var item = itemsArray[i + offset];
                 var character = format[i + formatOffset];
 
@@ -366,7 +371,17 @@
                     continue;
                 }
 
-                if (format[i] == 'f')
+                if (byteArrayPosition >= bytes.Length)
+                {
+                    break;
+                }
+
+                if (format[i] == '?')
+                {
+                    outputList.Add(bytes[byteArrayPosition] >= 1);
+                    byteArrayPosition++;
+                }
+                else if (format[i] == 'f')
                 {
                     var array = new byte[4];
                     Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
@@ -377,6 +392,7 @@
 
                     var value = BitConverter.ToSingle(array, 0);
                     outputList.Add(value);
+                    byteArrayPosition += 4;
                 }
                 else if (format[i] == 'd')
                 {
@@ -389,6 +405,7 @@
 
                     var value = BitConverter.ToDouble(array, 0);
                     outputList.Add(value);
+                    byteArrayPosition += 8;
                 }
                 else if (format[i] == 'q')
                 {
@@ -602,6 +619,8 @@
                 {
                     BinaryPrimitives.WriteUInt32LittleEndian(holder, unsignedInteger);
                 }
+
+                return holder.ToArray();
             }
             else if (boxedValue is long signedLongInteger)
             {
@@ -614,6 +633,8 @@
                 {
                     BinaryPrimitives.WriteInt64LittleEndian(holder, signedLongInteger);
                 }
+
+                return holder.ToArray();
             }
             else if (boxedValue is ulong unsignedLongInteger)
             {
@@ -626,6 +647,8 @@
                 {
                     BinaryPrimitives.WriteUInt64LittleEndian(holder, unsignedLongInteger);
                 }
+
+                return holder.ToArray();
             }
             else if (boxedValue is short signedShort)
             {
@@ -638,6 +661,8 @@
                 {
                     BinaryPrimitives.WriteInt16LittleEndian(holder, signedShort);
                 }
+
+                return holder.ToArray();
             }
             else if (boxedValue is ushort unsignedShort)
             {
@@ -650,13 +675,17 @@
                 {
                     BinaryPrimitives.WriteUInt16LittleEndian(holder, unsignedShort);
                 }
+
+                return holder.ToArray();
             }
             else if (boxedValue is byte || boxedValue is sbyte)
             {
                 return new byte[] { (byte)boxedValue };
             }
-
-            throw new ArgumentException("Unsupported object type found. We can pack only numerical value types.");
+            else
+            {
+                throw new ArgumentException("Unsupported object type found. We can pack only numerical value types.");
+            }
         }
 
         private bool AreWeInBigEndianMode(string format)
