@@ -1,0 +1,110 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>OPack</name>
+    </assembly>
+    <members>
+        <member name="T:OPack.Internal.IPacker">
+            <summary> The public interface partially lifted from Python's struct API. </summary>
+        </member>
+        <member name="M:OPack.Internal.IPacker.CalcSize(System.String)">
+            <summary>
+            Return the size of the struct (and hence of the bytes object produced by
+            <see cref="M:OPack.Internal.IPacker.Pack(System.String,System.Int32,System.Object[])" />) corresponding to the format string format.
+            </summary>
+            <param name="format"> The format to be used for packing. </param>
+            <returns> The size of the struct. </returns>
+        </member>
+        <member name="M:OPack.Internal.IPacker.Pack(System.String,System.Int32,System.Object[])">
+            <summary>
+            Convert an array of objects to a little endian or big endian byte array, while following
+            the specified format.
+            </summary>
+            <param name="format"> A "struct.unpack"-compatible format string. </param>
+            <param name="offset"> Where to start packing in the provided <paramref name="items" />. </param>
+            <param name="items"> An array of items to convert to a byte array. </param>
+            <returns> A byte array of packed elements. </returns>
+        </member>
+        <member name="M:OPack.Internal.IPacker.Unpack(System.String,System.Int32,System.Byte[])">
+            <summary>
+            Convert a byte array into an array of numerical value types based on Python's
+            "struct.unpack" protocol.
+            </summary>
+            <param name="format"> A "struct.unpack"-compatible format string. </param>
+            <param name="offset"> Where to start unpacking in the provided <paramref name="bytes" />. </param>
+            <param name="bytes"> An array of bytes to convert to objects. </param>
+            <returns> Array of objects. </returns>
+            <remarks>
+            You are responsible for casting the objects in the array back to their proper types.
+            </remarks>
+            <exception cref="T:System.ArgumentException">
+            If <paramref name="format" /> doesn't correspond to the length of <paramref name="bytes" />.
+            </exception>
+            <exception cref="T:System.ArgumentNullException">
+            If <paramref name="format" /> is null or empty, or if <paramref name="bytes" /> is null.
+            </exception>
+            <exception cref="T:System.InvalidOperationException">
+            If an invalid character for struct.unpack is found in <paramref name="format" />.
+            </exception>
+        </member>
+        <member name="T:OPack.Packer">
+            <summary> A translation of Python's pack and unpack protocol to C#. </summary>
+        </member>
+        <member name="M:OPack.Packer.AutoPack(System.Int32,System.Object[])">
+            <summary>
+            Convert an array of objects to a little endian byte array, and a string that can be used
+            with <see cref="M:OPack.Packer.Unpack(System.String,System.Int32,System.Byte[])" />.
+            </summary>
+            <param name="offset"> Where to start packing in the provided <paramref name="items" />. </param>
+            <param name="items"> An object array of value types to convert. </param>
+            <returns>
+            A <see cref="T:System.Tuple`2" /> Byte array containing the objects provided in binary format.
+            </returns>
+        </member>
+        <member name="M:OPack.Packer.NativeCalcSize``1(``0)">
+            <summary> Calculates the size of the struct in unmanaged memory. </summary>
+            <typeparam name="T"> typeof(struct). </typeparam>
+            <param name="nativeStruct"> The struct to give to <see cref="M:System.Runtime.InteropServices.Marshal.SizeOf``1(``0)" />. </param>
+            <returns> The native size of the struct. </returns>
+        </member>
+        <member name="M:OPack.Packer.CalcSize(System.String)">
+            <summary> <inheritdoc /> </summary>
+            <param name="format"> The format to be used for packing. </param>
+            <returns> The size of the struct. </returns>
+        </member>
+        <member name="M:OPack.Packer.Pack(System.String,System.Int32,System.Object[])">
+            <summary> <inheritdoc /> </summary>
+            <param name="format"> A "struct.unpack"-compatible format string. </param>
+            <param name="offset"> Where to start packing in the provided <paramref name="items" />. </param>
+            <param name="items"> An array of items to convert to a byte array. </param>
+            <returns> A byte array of packed elements. </returns>
+        </member>
+        <member name="M:OPack.Packer.Unpack(System.String,System.Int32,System.Byte[])">
+            <summary> <inheritdoc /> </summary>
+            <param name="format"> A "struct.unpack"-compatible format string. </param>
+            <param name="offset"> Where to start unpacking in the provided <paramref name="bytes" />. </param>
+            <param name="bytes"> An array of bytes to convert to objects. </param>
+            <returns> Array of objects. </returns>
+            <remarks>
+            You are responsible for casting the objects in the array back to their proper types.
+            </remarks>
+            <exception cref="T:System.ArgumentException">
+            If <paramref name="format" /> doesn't correspond to the length of <paramref name="bytes" />.
+            </exception>
+            <exception cref="T:System.ArgumentNullException">
+            If <paramref name="format" /> is null or empty, or if <paramref name="bytes" /> is null.
+            </exception>
+            <exception cref="T:System.InvalidOperationException">
+            If an invalid character for struct.unpack is found in <paramref name="format" />.
+            </exception>
+        </member>
+        <member name="M:OPack.Packer.TypeAgnosticGetBytes(System.Object,System.Boolean)">
+            <summary>
+            We use this function to provide an easier way to type-agnostically call the GetBytes
+            method of the BitConverter class. This means we can have much cleaner code above.
+            </summary>
+            <param name="boxedValue"> The numerical value type to pack into an array of bytes. </param>
+            <param name="isBigEndian"> Do we use little or big endian mode. </param>
+        </member>
+    </members>
+</doc>

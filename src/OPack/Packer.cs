@@ -6,29 +6,73 @@
     using System.Collections.Generic;
     using System.Globalization;
     using System.Linq;
+    using System.Runtime.InteropServices;
     using System.Text;
+    using OPack.Internal;
 
     /// <summary> A translation of Python's pack and unpack protocol to C#. </summary>
-    public static class Packer
+    public class Packer : IPacker
     {
-        private static readonly char[] EndiannessPrefixes = { '<', '>', '@', '=', '!' };
+        private readonly char[] endiannessPrefixes = { '<', '>', '@', '=', '!' };
 
         /// <summary>
-        /// Return the size of the struct (and hence of the bytes object produced by
-        /// <see cref="Pack(int, object[])" />) corresponding to the format string format.
+        /// Convert an array of objects to a little endian byte array, and a string that can be used
+        /// with <see cref="Unpack(string, int, byte[])" />.
         /// </summary>
+        /// <param name="offset"> Where to start packing in the provided <paramref name="items" />. </param>
+        /// <param name="items"> An object array of value types to convert. </param>
+        /// <returns>
+        /// A <see cref="Tuple{T1, T2}" /> Byte array containing the objects provided in binary format.
+        /// </returns>
+        public static Tuple<byte[], string> AutoPack(int offset = 0, params object[] items)
+        {
+            if (items is null)
+            {
+                throw new ArgumentNullException(nameof(items));
+            }
+
+            StringBuilder format = new StringBuilder();
+
+            List<byte> outputBytes = new List<byte>();
+
+            for (int i = offset; i < items.Length; i++)
+            {
+                var obj = items[i];
+                byte[] theseBytes = TypeAgnosticGetBytes(obj, false);
+                format.Append(GetFormatSpecifierFor(obj));
+                outputBytes.AddRange(theseBytes);
+            }
+
+            return Tuple.Create(outputBytes.ToArray(), format.ToString());
+        }
+
+        /// <summary> Calculates the size of the struct in unmanaged memory. </summary>
+        /// <typeparam name="T"> typeof(struct). </typeparam>
+        /// <param name="nativeStruct"> The struct to give to <see cref="Marshal.SizeOf{T}(T)" />. </param>
+        /// <returns> The native size of the struct. </returns>
+        public static int NativeCalcSize<T>(T nativeStruct)
+            where T : struct
+        {
+            return Marshal.SizeOf<T>(nativeStruct);
+        }
+
+        /// <summary> <inheritdoc /> </summary>
         /// <param name="format"> The format to be used for packing. </param>
         /// <returns> The size of the struct. </returns>
-        public static int CalcSize(string format)
+        public int CalcSize(string format)
         {
             if (string.IsNullOrWhiteSpace(format))
             {
                 throw new ArgumentNullException($"{nameof(format)} cannot be null or empty.");
             }
 
+            this.ThrowIfNativeMode(format);
+
+            format = this.ExpandFormat(format);
+
             string formatWithoutEndianness = format;
 
-            if (EndiannessPrefixes.Contains(format[0]))
+            if (this.endiannessPrefixes.Contains(format[0]))
             {
                 formatWithoutEndianness = format.Substring(1);
             }
@@ -52,11 +96,13 @@
                         totalByteLength += 4;
                         break;
 
+                    case 'e':
                     case 'h':
                     case 'H':
                         totalByteLength += 2;
                         break;
 
+                    case 'c':
                     case 'b':
                     case '?':
                     case 'B':
@@ -72,15 +118,12 @@
             return totalByteLength;
         }
 
-        /// <summary>
-        /// Convert an array of objects to a little endian or big endian byte array, while following
-        /// the specified format.
-        /// </summary>
+        /// <summary> <inheritdoc /> </summary>
         /// <param name="format"> A "struct.unpack"-compatible format string. </param>
         /// <param name="offset"> Where to start packing in the provided <paramref name="items" />. </param>
         /// <param name="items"> An array of items to convert to a byte array. </param>
         /// <returns> A byte array of packed elements. </returns>
-        public static byte[] Pack(string format, int offset = 0, params object[] items)
+        public byte[] Pack(string format, int offset = 0, params object[] items)
         {
             if (items == null)
             {
@@ -91,6 +134,8 @@
             {
                 throw new ArgumentNullException(nameof(format));
             }
+
+            format = this.ExpandFormat(format);
 
             object[] itemsArray = items;
 
@@ -106,10 +151,12 @@
                 }
             }
 
+            this.ThrowIfNativeMode(format);
+
             int formatLength = format.Length;
             int formatOffset = 0;
 
-            if (EndiannessPrefixes.Contains(format[0]))
+            if (this.endiannessPrefixes.Contains(format[0]))
             {
                 formatLength--;
                 formatOffset = 1;
@@ -120,7 +167,7 @@
                 throw new ArgumentException($"The number of {nameof(items)} provided does not match the total length of the ${nameof(format)} string.");
             }
 
-            bool useBigEndian = AreWeInBigEndianMode(format);
+            bool useBigEndian = this.AreWeInBigEndianMode(format);
 
             List<byte> outputBytes = new List<byte>();
 
@@ -232,41 +279,7 @@
             return outputBytes.ToArray();
         }
 
-        /// <summary>
-        /// Convert an array of objects to a little endian byte array, and a string that can be used
-        /// with <see cref="Unpack(string, int, byte[])" />.
-        /// </summary>
-        /// <param name="offset"> Where to start packing in the provided <paramref name="items" />. </param>
-        /// <param name="items"> An object array of value types to convert. </param>
-        /// <returns>
-        /// A <see cref="Tuple{T1, T2}" /> Byte array containing the objects provided in binary format.
-        /// </returns>
-        public static Tuple<byte[], string> Pack(int offset = 0, params object[] items)
-        {
-            if (items is null)
-            {
-                throw new ArgumentNullException(nameof(items));
-            }
-
-            StringBuilder format = new StringBuilder();
-
-            List<byte> outputBytes = new List<byte>();
-
-            for (int i = offset; i < items.Length; i++)
-            {
-                var obj = items[i];
-                byte[] theseBytes = TypeAgnosticGetBytes(obj, false);
-                format.Append(GetFormatSpecifierFor(obj));
-                outputBytes.AddRange(theseBytes);
-            }
-
-            return Tuple.Create(outputBytes.ToArray(), format.ToString());
-        }
-
-        /// <summary>
-        /// Convert a byte array into an array of numerical value types based on Python's
-        /// "struct.unpack" protocol.
-        /// </summary>
+        /// <summary> <inheritdoc /> </summary>
         /// <param name="format"> A "struct.unpack"-compatible format string. </param>
         /// <param name="offset"> Where to start unpacking in the provided <paramref name="bytes" />. </param>
         /// <param name="bytes"> An array of bytes to convert to objects. </param>
@@ -277,7 +290,13 @@
         /// <exception cref="ArgumentException">
         /// If <paramref name="format" /> doesn't correspond to the length of <paramref name="bytes" />.
         /// </exception>
-        public static object[] Unpack(string format, int offset = 0, params byte[] bytes)
+        /// <exception cref="ArgumentNullException">
+        /// If <paramref name="format" /> is null or empty, or if <paramref name="bytes" /> is null.
+        /// </exception>
+        /// <exception cref="InvalidOperationException">
+        /// If an invalid character for struct.unpack is found in <paramref name="format" />.
+        /// </exception>
+        public object[] Unpack(string format, int offset = 0, params byte[] bytes)
         {
             if (bytes is null)
             {
@@ -289,18 +308,22 @@
                 throw new ArgumentNullException(nameof(format));
             }
 
-            if (bytes.Length != CalcSize(format))
+            if (bytes.Length != this.CalcSize(format))
             {
                 throw new ArgumentException("The number of bytes provided does not match the total length of the format string.");
             }
 
-            bool useBigEndian = AreWeInBigEndianMode(format);
+            this.ThrowIfNativeMode(format);
+
+            format = this.ExpandFormat(format);
+
+            bool useBigEndian = this.AreWeInBigEndianMode(format);
 
             int byteArrayPosition = offset;
             List<object> outputList = new List<object>();
             for (int i = 0; i < format.Length; i++)
             {
-                if (EndiannessPrefixes.Contains(format[i]) && i == 0)
+                if (this.endiannessPrefixes.Contains(format[i]) && i == 0)
                 {
                     continue;
                 }
@@ -422,35 +445,6 @@
             }
 
             return outputList.ToArray();
-        }
-
-        private static bool AreWeInBigEndianMode(string format)
-        {
-            var selectedPrefix = '@';
-
-            if (EndiannessPrefixes.Contains(format[0]))
-            {
-                selectedPrefix = format[0];
-            }
-
-            bool isBigEndian = false;
-
-            if (selectedPrefix == '@' || selectedPrefix == '=')
-            {
-                isBigEndian = !BitConverter.IsLittleEndian;
-            }
-
-            if (selectedPrefix == '<')
-            {
-                isBigEndian = false;
-            }
-
-            if (selectedPrefix == '>' || selectedPrefix == '!')
-            {
-                isBigEndian = true;
-            }
-
-            return isBigEndian;
         }
 
         private static string GetFormatSpecifierFor(object obj)
@@ -601,6 +595,81 @@
             }
 
             throw new ArgumentException("Unsupported object type found. We can pack only numerical value types.");
+        }
+
+        private bool AreWeInBigEndianMode(string format)
+        {
+            var selectedPrefix = '@';
+
+            if (this.endiannessPrefixes.Contains(format[0]))
+            {
+                selectedPrefix = format[0];
+            }
+
+            bool isBigEndian = false;
+
+            if (selectedPrefix == '@' || selectedPrefix == '=')
+            {
+                isBigEndian = !BitConverter.IsLittleEndian;
+            }
+
+            if (selectedPrefix == '<')
+            {
+                isBigEndian = false;
+            }
+
+            if (selectedPrefix == '>' || selectedPrefix == '!')
+            {
+                isBigEndian = true;
+            }
+
+            return isBigEndian;
+        }
+
+        private string ExpandFormat(string format)
+        {
+            char[] numbers = new[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
+            if (!format.ToCharArray().Any(x => numbers.Contains(x)))
+            {
+                return format;
+            }
+
+            var expandedFormat = new StringBuilder();
+
+            var numberHolder = new StringBuilder();
+
+            string lastCharacter = string.Empty;
+
+            for (int i = 0; i < format.Length; i++)
+            {
+                if (numbers.Contains(format[i]))
+                {
+                    numberHolder.Append(format[i]);
+                }
+                else
+                {
+                    if (!string.IsNullOrWhiteSpace(lastCharacter) && int.TryParse(numberHolder.ToString(), out var times))
+                    {
+                        for (int j = 0; j < times; j++)
+                        {
+                            expandedFormat.Append(lastCharacter);
+                        }
+                    }
+
+                    lastCharacter = format[i].ToString(CultureInfo.InvariantCulture);
+                    expandedFormat.Append(format[i]);
+                }
+            }
+
+            return expandedFormat.ToString();
+        }
+
+        private void ThrowIfNativeMode(string format)
+        {
+            if (format[0] == this.endiannessPrefixes[2] || !this.endiannessPrefixes.Contains(format[0]))
+            {
+                throw new InvalidOperationException("Use Native* methods for native (un)packing of structs");
+            }
         }
     }
 }

@@ -28,14 +28,14 @@
             {
                 offset = opts.Offset.Value;
             }
-            var bytes = Packer.Pack(
+            var bytes = new Packer().Pack(
                 opts.PackFormat,
                 offset,
                 opts.Input);
 
             if (opts.MustUnpack)
             {
-                var objects = Packer.Unpack(opts.PackFormat, offset, bytes);
+                var objects = new Packer().Unpack(opts.PackFormat, offset, bytes);
                 Console.Write('(');
                 for (int i = 0; i < objects.Length; i++)
                 {
@@ -50,10 +50,10 @@
                 var output = new StringBuilder();
                 foreach (var item in bytes)
                 {
-                    output.Append($@"\x{item.ToString("X", CultureInfo.CurrentCulture)}");
+                    output.Append(@"\x").Append(item.ToString("X", CultureInfo.CurrentCulture));
                 }
 
-                Console.WriteLine($@"b'{output}'");
+                Console.WriteLine($"b'{output}'");
             }
         }
 
