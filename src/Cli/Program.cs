@@ -62,7 +62,7 @@
         private class Options
         {
             [Option('i', "input", Required = true, HelpText = "Input number(s) to pack, separated by spaces.")]
-            public IEnumerable<long> Input { get; set; }
+            public IEnumerable<double> Input { get; set; }
 
             [Option('u', "unpack", Required = false, HelpText = "Display result after unpacking, not only packing.")]
             public bool MustUnpack { get; set; }

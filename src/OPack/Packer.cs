@@ -46,14 +46,32 @@
             return Tuple.Create(outputBytes.ToArray(), format.ToString());
         }
 
-        /// <summary> Calculates the size of the struct in unmanaged memory. </summary>
+        /// <summary> Calculates the size of the <see langword="struct" /> in unmanaged memory. </summary>
         /// <typeparam name="T"> typeof(struct). </typeparam>
-        /// <param name="nativeStruct"> The struct to give to <see cref="Marshal.SizeOf{T}(T)" />. </param>
+        /// <param name="csharpStruct"> The struct to give to <see cref="Marshal.SizeOf{T}(T)" />. </param>
         /// <returns> The native size of the struct. </returns>
-        public static int NativeCalcSize<T>(T nativeStruct)
+        public static int NativeCalcSize<T>(T csharpStruct)
             where T : struct
         {
-            return Marshal.SizeOf<T>(nativeStruct);
+            return Marshal.SizeOf(csharpStruct);
+        }
+
+        /// <summary> Packs a <see langword="struct" /> into an array of bytes. </summary>
+        /// <typeparam name="T"> typeof(struct). </typeparam>
+        /// <param name="cSharpStruct"> The struct to give to <see cref="Marshal.SizeOf{T}(T)" />. </param>
+        /// <param name="offset">
+        /// The index from which the fields will be packed. The order of declaration matters here.
+        /// </param>
+        /// <returns>
+        /// The struct packed in a one dimensional array, and a string to be used with <see />.
+        /// </returns>
+        public static Tuple<byte[], string> NativePack<T>(T cSharpStruct, int offset = 0)
+            where T : struct
+        {
+            var structFields = cSharpStruct.GetType().GetFields()
+               .Select(x => x.GetValue(cSharpStruct))
+               .ToArray();
+            return AutoPack(offset, structFields);
         }
 
         /// <summary> <inheritdoc /> </summary>
@@ -85,7 +103,7 @@
                     case 'q':
                     case 'Q':
                     case 'd':
-                        totalByteLength += 8;
+                        totalByteLength += sizeof(long);
                         break;
 
                     case 'i':
@@ -93,13 +111,13 @@
                     case 'l':
                     case 'L':
                     case 'f':
-                        totalByteLength += 4;
+                        totalByteLength += sizeof(float);
                         break;
 
                     case 'e':
                     case 'h':
                     case 'H':
-                        totalByteLength += 2;
+                        totalByteLength += sizeof(char);
                         break;
 
                     case 'c':
@@ -107,7 +125,7 @@
                     case '?':
                     case 'B':
                     case 'x':
-                        totalByteLength++;
+                        totalByteLength += sizeof(bool);
                         break;
 
                     default:
@@ -176,7 +194,27 @@
                 var item = itemsArray[i + offset];
                 var character = format[i + formatOffset];
 
-                if (character == '?' || character == 'B')
+                if (character == 'f')
+                {
+                    var convertedItem = BitConverter.GetBytes(Convert.ToSingle(item, CultureInfo.InvariantCulture));
+                    if (useBigEndian != !BitConverter.IsLittleEndian)
+                    {
+                        Array.Reverse(convertedItem);
+                    }
+
+                    outputBytes.AddRange(convertedItem);
+                }
+                else if (character == 'd')
+                {
+                    var convertedItem = BitConverter.GetBytes(Convert.ToDouble(item, CultureInfo.InvariantCulture));
+                    if (useBigEndian != !BitConverter.IsLittleEndian)
+                    {
+                        Array.Reverse(convertedItem);
+                    }
+
+                    outputBytes.AddRange(convertedItem);
+                }
+                else if (character == '?' || character == 'B')
                 {
                     byte convertedItem = Convert.ToByte(item, CultureInfo.InvariantCulture);
                     outputBytes.Add(convertedItem);
@@ -328,7 +366,31 @@
                     continue;
                 }
 
-                if (format[i] == 'q')
+                if (format[i] == 'f')
+                {
+                    var array = new byte[4];
+                    Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
+                    if (useBigEndian != !BitConverter.IsLittleEndian)
+                    {
+                        Array.Reverse(array);
+                    }
+
+                    var value = BitConverter.ToSingle(array, 0);
+                    outputList.Add(value);
+                }
+                else if (format[i] == 'd')
+                {
+                    var array = new byte[8];
+                    Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
+                    if (useBigEndian != !BitConverter.IsLittleEndian)
+                    {
+                        Array.Reverse(array);
+                    }
+
+                    var value = BitConverter.ToDouble(array, 0);
+                    outputList.Add(value);
+                }
+                else if (format[i] == 'q')
                 {
                     var array = new byte[8];
                     Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);

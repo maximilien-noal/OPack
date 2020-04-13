@@ -2,7 +2,7 @@
   "profiles": {
     "Cli": {
       "commandName": "Project",
-      "commandLineArgs": "-f \"<q\" -i 9223372036854775807"
+      "commandLineArgs": "-f \">d\" -i 1.2 -u"
     }
   }
 }
