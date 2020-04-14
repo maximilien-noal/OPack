@@ -48,28 +48,28 @@
 
         /// <summary> Calculates the size of the <see langword="struct" /> in unmanaged memory. </summary>
         /// <typeparam name="T"> typeof(struct). </typeparam>
-        /// <param name="csharpStruct"> The struct to give to <see cref="Marshal.SizeOf{T}(T)" />. </param>
+        /// <param name="target"> The struct to give to <see cref="Marshal.SizeOf{T}(T)" />. </param>
         /// <returns> The native size of the struct. </returns>
-        public static int NativeCalcSize<T>(T csharpStruct)
+        public static int NativeCalcSize<T>(T target)
             where T : struct
         {
-            return Marshal.SizeOf(csharpStruct);
+            return Marshal.SizeOf(target);
         }
 
         /// <summary> Packs a <see langword="struct" /> into an array of bytes. </summary>
         /// <typeparam name="T"> typeof(struct). </typeparam>
-        /// <param name="cSharpStruct"> The struct to give to <see cref="Marshal.SizeOf{T}(T)" />. </param>
+        /// <param name="target"> The <see langword="struct" /> to pack. </param>
         /// <param name="offset">
         /// The index from which the fields will be packed. The order of declaration matters here.
         /// </param>
         /// <returns>
         /// The struct packed in a one dimensional array, and a string to be used with <see />.
         /// </returns>
-        public static Tuple<byte[], string> NativePack<T>(T cSharpStruct, int offset = 0)
+        public static Tuple<byte[], string> NativePack<T>(T target, int offset = 0)
             where T : struct
         {
-            var structFields = cSharpStruct.GetType().GetFields()
-               .Select(x => x.GetValue(cSharpStruct))
+            var structFields = target.GetType().GetFields()
+               .Select(x => x.GetValue(target))
                .ToArray();
             return AutoPack(offset, structFields);
         }
