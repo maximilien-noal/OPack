@@ -4,11 +4,11 @@
 
     internal struct LongBoolShort
     {
-        private bool boolField;
+        public bool boolField;
 
-        private long longField;
+        public long longField;
 
-        private short shortField;
+        public short shortField;
     }
 
 #pragma warning enable

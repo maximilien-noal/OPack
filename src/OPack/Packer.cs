@@ -48,30 +48,43 @@
 
         /// <summary> Calculates the size of the <see langword="struct" /> in unmanaged memory. </summary>
         /// <typeparam name="T"> typeof(struct). </typeparam>
-        /// <param name="target"> The struct to give to <see cref="Marshal.SizeOf{T}(T)" />. </param>
         /// <returns> The native size of the struct. </returns>
-        public static int NativeCalcSize<T>(T target)
+        public static int NativeCalcSize<T>()
             where T : struct
         {
-            return Marshal.SizeOf(target);
+            return Marshal.SizeOf(typeof(T));
         }
 
         /// <summary> Packs a <see langword="struct" /> into an array of bytes. </summary>
         /// <typeparam name="T"> typeof(struct). </typeparam>
         /// <param name="target"> The <see langword="struct" /> to pack. </param>
-        /// <param name="offset">
-        /// The index from which the fields will be packed. The order of declaration matters here.
-        /// </param>
         /// <returns>
         /// The struct packed in a one dimensional array, and a string to be used with <see />.
         /// </returns>
-        public static Tuple<byte[], string> NativePack<T>(T target, int offset = 0)
+        public static byte[] NativePack<T>(T target)
             where T : struct
         {
-            var structFields = target.GetType().GetFields()
-               .Select(x => x.GetValue(target))
-               .ToArray();
-            return AutoPack(offset, structFields);
+            var bufferSize = Marshal.SizeOf(typeof(T));
+            IntPtr handle = Marshal.AllocHGlobal(bufferSize);
+            Marshal.StructureToPtr(target, handle, true);
+            var byteArray = new byte[bufferSize];
+            Marshal.Copy(handle, byteArray, 0, bufferSize);
+            Marshal.FreeHGlobal(handle);
+            return byteArray;
+        }
+
+        /// <summary> Unpacks a byte array into a struct. </summary>
+        /// <typeparam name="T"> The type of struct. </typeparam>
+        /// <param name="byteArrayOfStruct"> The byte array to unpack from. </param>
+        /// <returns> An instance of the struct. </returns>
+        public static T NativeUnpack<T>(byte[] byteArrayOfStruct)
+            where T : struct
+        {
+            IntPtr handle = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(T)));
+            Marshal.Copy(byteArrayOfStruct, 0, handle, Marshal.SizeOf(typeof(T)));
+            var structure = Marshal.PtrToStructure<T>(handle);
+            Marshal.FreeHGlobal(handle);
+            return structure;
         }
 
         /// <summary> <inheritdoc /> </summary>
@@ -129,7 +142,7 @@
                         break;
 
                     default:
-                        throw new ArgumentException($"Invalid character found in format string : {formatWithoutEndianness[i]}.");
+                        throw new ArgumentException($"Invalid character found in {nameof(format)} string : {formatWithoutEndianness[i]} at position {i}.");
                 }
             }
 
@@ -182,7 +195,7 @@
 
             if (items.Length != formatLength)
             {
-                throw new ArgumentException($"The number of {nameof(items)} provided does not match the total length of the ${nameof(format)} string.");
+                throw new ArgumentException($"The number of {nameof(items)} ({items.Length}) provided does not match the total length ({formatLength}) of the ${nameof(format)} string.");
             }
 
             bool useBigEndian = this.AreWeInBigEndianMode(format);
@@ -351,14 +364,16 @@
                 throw new ArgumentNullException(nameof(format));
             }
 
-            if (bytes.Length != this.CalcSize(format))
+            format = this.ExpandFormat(format);
+
+            var computedSize = this.CalcSize(format);
+
+            if (bytes.Length != computedSize)
             {
-                throw new ArgumentException("The number of bytes provided does not match the total length of the format string.");
+                throw new ArgumentException($"The number of {nameof(bytes)} provided ({bytes.Length}) does not match the total length ({computedSize}) of the {nameof(format)} string.");
             }
 
             this.ThrowIfNativeMode(format);
-
-            format = this.ExpandFormat(format);
 
             bool useBigEndian = this.AreWeInBigEndianMode(format);
 
@@ -583,7 +598,7 @@
                 return "b";
             }
 
-            throw new ArgumentException("Unsupported object type found");
+            throw new ArgumentException($"Unsupported object type found: {obj.GetType()}");
         }
 
         /// <summary>
@@ -594,7 +609,13 @@
         /// <param name="isBigEndian"> Do we use little or big endian mode. </param>
         private static byte[] TypeAgnosticGetBytes(object boxedValue, bool isBigEndian)
         {
-            if (boxedValue is int signedInteger)
+            if (boxedValue is bool boolean)
+            {
+                return !boolean
+                    ? (new byte[] { 0 })
+                    : (new byte[] { 1 });
+            }
+            else if (boxedValue is int signedInteger)
             {
                 Span<byte> holder = stackalloc byte[4];
                 if (isBigEndian)
@@ -684,7 +705,7 @@
             }
             else
             {
-                throw new ArgumentException("Unsupported object type found. We can pack only numerical value types.");
+                throw new ArgumentException($"Unsupported object type found: {boxedValue.GetType()}. We can pack only numerical value types.");
             }
         }
 
@@ -725,13 +746,18 @@
                 return format;
             }
 
+            if (char.IsDigit(format[format.Length - 1]))
+            {
+                throw new InvalidOperationException("Repeat count given without format specifier");
+            }
+
             var expandedFormat = new StringBuilder();
 
             var numberHolder = new StringBuilder();
 
             string lastCharacter = string.Empty;
 
-            for (int i = 0; i < format.Length; i++)
+            for (int i = format.Length - 1; i >= 0; i--)
             {
                 if (numbers.Contains(format[i]))
                 {
@@ -741,6 +767,7 @@
                 {
                     if (!string.IsNullOrWhiteSpace(lastCharacter) && int.TryParse(numberHolder.ToString(), out var times))
                     {
+                        expandedFormat.Remove(expandedFormat.Length - 1, 1);
                         for (int j = 0; j < times; j++)
                         {
                             expandedFormat.Append(lastCharacter);
@@ -752,7 +779,7 @@
                 }
             }
 
-            return expandedFormat.ToString();
+            return new string(expandedFormat.ToString().Reverse().ToArray());
         }
 
         private void ThrowIfNativeMode(string format)

@@ -28,7 +28,7 @@
         public void CalcNativeStructSize()
         {
             var size = Marshal.SizeOf(new LongBoolShort());
-            var returnValue = Packer.NativeCalcSize(new LongBoolShort());
+            var returnValue = Packer.NativeCalcSize<LongBoolShort>();
             returnValue.Should().Be(size);
         }
     }

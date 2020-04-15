@@ -54,5 +54,12 @@ namespace OPack.Tests
             var returnValue = new Packer().Pack("<b", 0, -128);
             returnValue.Should().ContainSingle().And.BeEquivalentTo(128);
         }
+
+        [Fact]
+        public void PackWithRepeatCountLittleEndian()
+        {
+            var returnValue = new Packer().Pack("<3BB", default, 1, 1, 1, 1);
+            returnValue.Should().HaveCount(4);
+        }
     }
 }
