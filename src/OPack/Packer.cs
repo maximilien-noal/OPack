@@ -99,7 +99,7 @@
 
             this.ThrowIfNativeMode(format);
 
-            format = this.ExpandFormat(format);
+            format = ExpandFormat(format);
 
             string formatWithoutEndianness = format;
 
@@ -166,7 +166,7 @@
                 throw new ArgumentNullException(nameof(format));
             }
 
-            format = this.ExpandFormat(format);
+            format = ExpandFormat(format, items.Length);
 
             object[] itemsArray = items;
 
@@ -193,7 +193,7 @@
                 formatOffset = 1;
             }
 
-            if (items.Length != formatLength)
+            if (formatLength < items.Length)
             {
                 throw new ArgumentException($"The number of {nameof(items)} ({items.Length}) provided does not match the total length ({formatLength}) of the ${nameof(format)} string.");
             }
@@ -210,6 +210,12 @@
                 }
 
                 var item = itemsArray[i + offset];
+
+                if (item is null)
+                {
+                    throw new ArgumentNullException($"{nameof(format)}, at {i + offset}");
+                }
+
                 var character = format[i + formatOffset];
 
                 if (character == 'f')
@@ -247,11 +253,11 @@
                     Span<byte> dest = stackalloc byte[4];
                     if (useBigEndian)
                     {
-                        BinaryPrimitives.WriteInt32BigEndian(dest, (int)item);
+                        BinaryPrimitives.WriteInt32BigEndian(dest, Convert.ToInt32(item, CultureInfo.InvariantCulture));
                     }
                     else
                     {
-                        BinaryPrimitives.WriteInt32LittleEndian(dest, (int)item);
+                        BinaryPrimitives.WriteInt32LittleEndian(dest, Convert.ToInt32(item, CultureInfo.InvariantCulture));
                     }
 
                     outputBytes.AddRange(dest.ToArray());
@@ -261,11 +267,11 @@
                     Span<byte> dest = stackalloc byte[4];
                     if (useBigEndian)
                     {
-                        BinaryPrimitives.WriteUInt32BigEndian(dest, (uint)item);
+                        BinaryPrimitives.WriteUInt32BigEndian(dest, Convert.ToUInt32(item, CultureInfo.InvariantCulture));
                     }
                     else
                     {
-                        BinaryPrimitives.WriteUInt32LittleEndian(dest, (uint)item);
+                        BinaryPrimitives.WriteUInt32LittleEndian(dest, Convert.ToUInt32(item, CultureInfo.InvariantCulture));
                     }
 
                     outputBytes.AddRange(dest.ToArray());
@@ -275,11 +281,11 @@
                     Span<byte> dest = stackalloc byte[8];
                     if (useBigEndian)
                     {
-                        BinaryPrimitives.WriteInt64BigEndian(dest, (long)item);
+                        BinaryPrimitives.WriteInt64BigEndian(dest, Convert.ToInt64(item, CultureInfo.InvariantCulture));
                     }
                     else
                     {
-                        BinaryPrimitives.WriteInt64LittleEndian(dest, (long)item);
+                        BinaryPrimitives.WriteInt64LittleEndian(dest, Convert.ToInt64(item, CultureInfo.InvariantCulture));
                     }
 
                     outputBytes.AddRange(dest.ToArray());
@@ -289,11 +295,11 @@
                     Span<byte> dest = stackalloc byte[8];
                     if (useBigEndian)
                     {
-                        BinaryPrimitives.WriteUInt64BigEndian(dest, (ulong)item);
+                        BinaryPrimitives.WriteUInt64BigEndian(dest, Convert.ToUInt64(item, CultureInfo.InvariantCulture));
                     }
                     else
                     {
-                        BinaryPrimitives.WriteUInt64LittleEndian(dest, (ulong)item);
+                        BinaryPrimitives.WriteUInt64LittleEndian(dest, Convert.ToUInt64(item, CultureInfo.InvariantCulture));
                     }
 
                     outputBytes.AddRange(dest.ToArray());
@@ -303,11 +309,11 @@
                     Span<byte> dest = stackalloc byte[2];
                     if (useBigEndian)
                     {
-                        BinaryPrimitives.WriteInt16BigEndian(dest, (short)item);
+                        BinaryPrimitives.WriteInt16BigEndian(dest, Convert.ToInt16(item, CultureInfo.InvariantCulture));
                     }
                     else
                     {
-                        BinaryPrimitives.WriteInt16LittleEndian(dest, (short)item);
+                        BinaryPrimitives.WriteInt16LittleEndian(dest, Convert.ToInt16(item, CultureInfo.InvariantCulture));
                     }
 
                     outputBytes.AddRange(dest.ToArray());
@@ -317,11 +323,11 @@
                     Span<byte> dest = stackalloc byte[2];
                     if (useBigEndian)
                     {
-                        BinaryPrimitives.WriteUInt16BigEndian(dest, (ushort)item);
+                        BinaryPrimitives.WriteUInt16BigEndian(dest, Convert.ToUInt16(item, CultureInfo.InvariantCulture));
                     }
                     else
                     {
-                        BinaryPrimitives.WriteUInt16LittleEndian(dest, (ushort)item);
+                        BinaryPrimitives.WriteUInt16LittleEndian(dest, Convert.ToUInt16(item, CultureInfo.InvariantCulture));
                     }
 
                     outputBytes.AddRange(dest.ToArray());
@@ -364,11 +370,11 @@
                 throw new ArgumentNullException(nameof(format));
             }
 
-            format = this.ExpandFormat(format);
+            format = ExpandFormat(format, bytes.Length);
 
             var computedSize = this.CalcSize(format);
 
-            if (bytes.Length != computedSize)
+            if (computedSize < bytes.Length)
             {
                 throw new ArgumentException($"The number of {nameof(bytes)} provided ({bytes.Length}) does not match the total length ({computedSize}) of the {nameof(format)} string.");
             }
@@ -399,7 +405,7 @@
                 else if (format[i] == 'f')
                 {
                     var array = new byte[4];
-                    Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
+                    Array.Copy(bytes, byteArrayPosition, array, 0, Math.Min(Math.Min(array.Length, bytes.Length - byteArrayPosition), bytes.Length - byteArrayPosition));
                     if (useBigEndian != !BitConverter.IsLittleEndian)
                     {
                         Array.Reverse(array);
@@ -412,7 +418,7 @@
                 else if (format[i] == 'd')
                 {
                     var array = new byte[8];
-                    Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
+                    Array.Copy(bytes, byteArrayPosition, array, 0, Math.Min(array.Length, bytes.Length - byteArrayPosition));
                     if (useBigEndian != !BitConverter.IsLittleEndian)
                     {
                         Array.Reverse(array);
@@ -425,7 +431,7 @@
                 else if (format[i] == 'q')
                 {
                     var array = new byte[8];
-                    Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
+                    Array.Copy(bytes, byteArrayPosition, array, 0, Math.Min(array.Length, bytes.Length - byteArrayPosition));
                     if (useBigEndian)
                     {
                         outputList.Add(BinaryPrimitives.ReadInt64BigEndian(array));
@@ -440,7 +446,7 @@
                 else if (format[i] == 'Q')
                 {
                     var array = new byte[8];
-                    Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
+                    Array.Copy(bytes, byteArrayPosition, array, 0, Math.Min(array.Length, bytes.Length - byteArrayPosition));
                     if (useBigEndian)
                     {
                         outputList.Add(BinaryPrimitives.ReadUInt64BigEndian(array));
@@ -455,7 +461,7 @@
                 else if (format[i] == 'l')
                 {
                     var array = new byte[4];
-                    Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
+                    Array.Copy(bytes, byteArrayPosition, array, 0, Math.Min(array.Length, bytes.Length - byteArrayPosition));
                     if (useBigEndian)
                     {
                         outputList.Add(BinaryPrimitives.ReadInt32BigEndian(array));
@@ -467,10 +473,10 @@
 
                     byteArrayPosition += 4;
                 }
-                else if (format[i] == 'L')
+                else if (format[i] == 'L' || format[i] == 'I')
                 {
                     var array = new byte[4];
-                    Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
+                    Array.Copy(bytes, byteArrayPosition, array, 0, Math.Min(array.Length, bytes.Length - byteArrayPosition));
                     if (useBigEndian)
                     {
                         outputList.Add(BinaryPrimitives.ReadUInt32BigEndian(array));
@@ -485,7 +491,7 @@
                 else if (format[i] == 'h')
                 {
                     var array = new byte[2];
-                    Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
+                    Array.Copy(bytes, byteArrayPosition, array, 0, Math.Min(array.Length, bytes.Length - byteArrayPosition));
                     if (useBigEndian)
                     {
                         outputList.Add(BinaryPrimitives.ReadInt16BigEndian(array));
@@ -500,7 +506,7 @@
                 else if (format[i] == 'H')
                 {
                     var array = new byte[2];
-                    Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
+                    Array.Copy(bytes, byteArrayPosition, array, 0, Math.Min(array.Length, bytes.Length - byteArrayPosition));
                     if (useBigEndian)
                     {
                         outputList.Add(BinaryPrimitives.ReadUInt16BigEndian(array));
@@ -515,7 +521,7 @@
                 else if (format[i] == 'b' || format[i] == 'B')
                 {
                     byte[] array = new byte[1];
-                    Array.Copy(bytes, byteArrayPosition, array, 0, array.Length);
+                    Array.Copy(bytes, byteArrayPosition, array, 0, Math.Min(array.Length, bytes.Length - byteArrayPosition));
                     byte value = array[0];
                     if (format[i] == 'b')
                     {
@@ -539,6 +545,56 @@
             }
 
             return outputList.ToArray();
+        }
+
+        private static string ExpandFormat(string format, int numberOfElementsInStruct = 0)
+        {
+            char[] numbers = new[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
+            if (!format.ToCharArray().Any(x => numbers.Contains(x)) && numberOfElementsInStruct <= 0)
+            {
+                return format;
+            }
+
+            if (char.IsDigit(format[format.Length - 1]))
+            {
+                throw new InvalidOperationException("Repeat count given without format specifier");
+            }
+
+            if (!format.ToCharArray().Any(x => numbers.Contains(x)))
+            {
+                format = $"{format}{numberOfElementsInStruct}";
+            }
+
+            var expandedFormat = new StringBuilder();
+
+            var numberHolder = new StringBuilder();
+
+            string lastCharacter = string.Empty;
+
+            for (int i = format.Length - 1; i >= 0; i--)
+            {
+                char currentChar = format[i];
+                if (numbers.Contains(currentChar))
+                {
+                    numberHolder.Insert(0, currentChar);
+                }
+                else
+                {
+                    if (!string.IsNullOrWhiteSpace(lastCharacter) && int.TryParse(numberHolder.ToString(), out var times))
+                    {
+                        expandedFormat.Remove(expandedFormat.Length - 1, 1);
+                        for (int j = 0; j < times; j++)
+                        {
+                            expandedFormat.Insert(0, lastCharacter);
+                        }
+                    }
+
+                    lastCharacter = currentChar.ToString(CultureInfo.InvariantCulture);
+                    expandedFormat.Insert(0, currentChar);
+                }
+            }
+
+            return expandedFormat.ToString();
         }
 
         private static string GetFormatSpecifierFor(object obj)
@@ -736,50 +792,6 @@
             }
 
             return isBigEndian;
-        }
-
-        private string ExpandFormat(string format)
-        {
-            char[] numbers = new[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
-            if (!format.ToCharArray().Any(x => numbers.Contains(x)))
-            {
-                return format;
-            }
-
-            if (char.IsDigit(format[format.Length - 1]))
-            {
-                throw new InvalidOperationException("Repeat count given without format specifier");
-            }
-
-            var expandedFormat = new StringBuilder();
-
-            var numberHolder = new StringBuilder();
-
-            string lastCharacter = string.Empty;
-
-            for (int i = format.Length - 1; i >= 0; i--)
-            {
-                if (numbers.Contains(format[i]))
-                {
-                    numberHolder.Append(format[i]);
-                }
-                else
-                {
-                    if (!string.IsNullOrWhiteSpace(lastCharacter) && int.TryParse(numberHolder.ToString(), out var times))
-                    {
-                        expandedFormat.Remove(expandedFormat.Length - 1, 1);
-                        for (int j = 0; j < times; j++)
-                        {
-                            expandedFormat.Append(lastCharacter);
-                        }
-                    }
-
-                    lastCharacter = format[i].ToString(CultureInfo.InvariantCulture);
-                    expandedFormat.Append(format[i]);
-                }
-            }
-
-            return new string(expandedFormat.ToString().Reverse().ToArray());
         }
 
         private void ThrowIfNativeMode(string format)

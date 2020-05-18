@@ -1,6 +1,5 @@
 ﻿namespace OPack
 {
-    using System;
     using System.Runtime.InteropServices;
 
     /// <summary> The Packer API for native structs, as a set of extension methods to <see langword="struct" />. </summary>
