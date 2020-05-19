@@ -796,7 +796,9 @@
 
         private void ThrowIfNativeMode(string format)
         {
-            if (format[0] == this.endiannessPrefixes[2] || !this.endiannessPrefixes.Contains(format[0]))
+            if (format[0] == this.endiannessPrefixes[2] ||
+                format[0] == this.endiannessPrefixes[3] ||
+                !this.endiannessPrefixes.Contains(format[0]))
             {
                 throw new InvalidOperationException("Use Native* methods for native (un)packing of structs");
             }
