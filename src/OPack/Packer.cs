@@ -99,7 +99,7 @@
 
             this.ThrowIfNativeMode(format);
 
-            format = ExpandFormat(format);
+            format = this.ExpandFormat(format);
 
             string formatWithoutEndianness = format;
 
@@ -166,7 +166,7 @@
                 throw new ArgumentNullException(nameof(format));
             }
 
-            format = ExpandFormat(format, items.Length);
+            format = this.ExpandFormat(format, items.Length);
 
             object[] itemsArray = items;
 
@@ -370,7 +370,7 @@
                 throw new ArgumentNullException(nameof(format));
             }
 
-            format = ExpandFormat(format, bytes.Length);
+            format = this.ExpandFormat(format, bytes.Length);
 
             var computedSize = this.CalcSize(format);
 
@@ -545,56 +545,6 @@
             }
 
             return outputList.ToArray();
-        }
-
-        private static string ExpandFormat(string format, int numberOfElementsInStruct = 0)
-        {
-            char[] numbers = new[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
-            if (!format.ToCharArray().Any(x => numbers.Contains(x)) && numberOfElementsInStruct <= 0)
-            {
-                return format;
-            }
-
-            if (char.IsDigit(format[format.Length - 1]))
-            {
-                throw new InvalidOperationException("Repeat count given without format specifier");
-            }
-
-            if (!format.ToCharArray().Any(x => numbers.Contains(x)))
-            {
-                format = $"{format}{numberOfElementsInStruct}";
-            }
-
-            var expandedFormat = new StringBuilder();
-
-            var numberHolder = new StringBuilder();
-
-            string lastCharacter = string.Empty;
-
-            for (int i = format.Length - 1; i >= 0; i--)
-            {
-                char currentChar = format[i];
-                if (numbers.Contains(currentChar))
-                {
-                    numberHolder.Insert(0, currentChar);
-                }
-                else
-                {
-                    if (!string.IsNullOrWhiteSpace(lastCharacter) && int.TryParse(numberHolder.ToString(), out var times))
-                    {
-                        expandedFormat.Remove(expandedFormat.Length - 1, 1);
-                        for (int j = 0; j < times; j++)
-                        {
-                            expandedFormat.Insert(0, lastCharacter);
-                        }
-                    }
-
-                    lastCharacter = currentChar.ToString(CultureInfo.InvariantCulture);
-                    expandedFormat.Insert(0, currentChar);
-                }
-            }
-
-            return expandedFormat.ToString();
         }
 
         private static string GetFormatSpecifierFor(object obj)
@@ -794,10 +744,59 @@
             return isBigEndian;
         }
 
+        private string ExpandFormat(string format, int numberOfElementsInStruct = 0)
+        {
+            char[] numbers = new[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
+            if (!format.ToCharArray().Any(x => numbers.Contains(x)) && numberOfElementsInStruct <= 0)
+            {
+                return format;
+            }
+
+            if (char.IsDigit(format[format.Length - 1]))
+            {
+                throw new InvalidOperationException("Repeat count given without format specifier");
+            }
+
+            if (!format.ToCharArray().Any(x => numbers.Contains(x)) && this.endiannessPrefixes.Contains(format[0]) && format.Length == 2)
+            {
+                format = $"{format}{numberOfElementsInStruct}";
+            }
+
+            var expandedFormat = new StringBuilder();
+
+            var numberHolder = new StringBuilder();
+
+            string lastCharacter = string.Empty;
+
+            for (int i = format.Length - 1; i >= 0; i--)
+            {
+                char currentChar = format[i];
+                if (numbers.Contains(currentChar))
+                {
+                    numberHolder.Insert(0, currentChar);
+                }
+                else
+                {
+                    if (!string.IsNullOrWhiteSpace(lastCharacter) && int.TryParse(numberHolder.ToString(), out var times))
+                    {
+                        expandedFormat.Remove(expandedFormat.Length - 1, 1);
+                        for (int j = 0; j < times; j++)
+                        {
+                            expandedFormat.Insert(0, lastCharacter);
+                        }
+                    }
+
+                    lastCharacter = currentChar.ToString(CultureInfo.InvariantCulture);
+                    expandedFormat.Insert(0, currentChar);
+                }
+            }
+
+            return expandedFormat.ToString();
+        }
+
         private void ThrowIfNativeMode(string format)
         {
             if (format[0] == this.endiannessPrefixes[2] ||
-                format[0] == this.endiannessPrefixes[3] ||
                 !this.endiannessPrefixes.Contains(format[0]))
             {
                 throw new InvalidOperationException("Use Native* methods for native (un)packing of structs");
